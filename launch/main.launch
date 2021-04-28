@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- MAVROS posix SITL environment launch script -->
+    <!-- launches MAVROS, PX4 SITL, Gazebo environment, and spawns vehicle -->
+    <!-- vehicle pose -->
+
+<!--jackal!!-->
+
+    <group ns="jackal">
+      <arg name="robot_name" value="jackal" />
+      <param name="robot_description" command="$(find xacro)/xacro '$(find jackal_for_cps)/urdf/jackal_hanjeon.urdf.xacro'"/>
+      <param name="tf_prefix" value="$(arg robot_name)" />
+      <arg name="init_pose" value="-x 2.0 -y -0.0 -z 0.5 -Y 0" />
+      <node name="spawn_rosbot_model" pkg="gazebo_ros" type="spawn_model"
+     args="$(arg init_pose) -urdf -param robot_description -model $(arg robot_name)"
+     respawn="false" output="screen" />
+      <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" />
+      <param name="/parent_frame_id" value="world"/>
+      <param name="/append_rate" value="3"/>
+      <node name="gt_to_path" pkg="tf_to_trajectory" type="gazebo_gt_to_path.py" output="screen"/>
+      <node name="tf_broad" pkg="jackal_for_cps" type="tf_broadcaster.py"/>
+      <rosparam command="load" file="$(find jackal_for_cps)/config/control.yaml" />
+      <node name="controller_spawner" pkg="controller_manager" type="spawner" args="jackal_joint_publisher jackal_velocity_controller" />
+    </group>
+
+<!--    <node name="rvizualizer" pkg="rviz" type="rviz" args="-d /home/mason/Desktop/mavros/hanjeon/rviz.rviz"/>-->
+    <param name="/camera_link_name" value="/d435i/depth_camera_link"/>
+    <node name="broadcaster" pkg="px4" type="tf_broadcaster.py"/>
+
+<!--    <param name="/mobile_robot_vel_topic" value="/kobuki/mobile_base/commands/velocity"/>-->
+    <param name="/mobile_robot_vel_topic" value="/jackal/jackal_velocity_controller/cmd_vel"/>
+    <node name="ctrl_joy" pkg="px4" type="mavros_joy_controller.py" output="screen"/>
+    <node name="joy_ros" pkg="joy" type="joy_node">
+    <param name="/dev" value="/dev/input/js1"/>
+    </node>
+
+    <param name="/parent_frame_id" value="map"/>
+    <param name="/child_frame_id" value="base_link"/>
+    <param name="/out_topic_name" value="/my_path"/>
+    <param name="/append_rate" value="3"/>
+    <node name="drone_path" pkg="tf_to_trajectory" type="tf_to_path.py"/>
+
+    <arg name="x" default="3.0"/>
+    <arg name="y" default="0.0"/>
+    <arg name="z" default="1.5"/>
+    <arg name="R" default="0"/>
+    <arg name="P" default="0"/>
+    <arg name="Y" default="0"/>
+    <!-- vehicle model and world -->
+    <arg name="est" default="ekf2"/>
+    <arg name="vehicle" default="iris"/>
+    <arg name="sensor" default="horizontal_drone_d435i_t265"/>
+    <arg name="world" default="empty.world"/>
+    <arg name="sdf" default="/home/mason/Desktop/mavros/hanjeon/$(arg sensor)/$(arg sensor).sdf"/>
+<!--    <arg name="sdf" default="/home/mason/Firmware/Tools/sitl_gazebo/models/iris/iris.sdf"/>-->
+
+    <!-- gazebo configs -->
+    <arg name="gui" default="true"/>
+    <arg name="debug" default="false"/>
+    <arg name="verbose" default="false"/>
+    <arg name="paused" default="false"/>
+    <arg name="respawn_gazebo" default="false"/>
+    <!-- MAVROS configs -->
+    <arg name="fcu_url" default="udp://:14540@localhost:14557"/>
+    <arg name="respawn_mavros" default="false"/>
+    <!-- PX4 configs -->
+    <arg name="interactive" default="true"/>
+    <!-- PX4 SITL and Gazebo -->
+    <include file="$(find px4)/launch/posix_sitl.launch">
+        <arg name="x" value="$(arg x)"/>
+        <arg name="y" value="$(arg y)"/>
+        <arg name="z" value="$(arg z)"/>
+        <arg name="R" value="$(arg R)"/>
+        <arg name="P" value="$(arg P)"/>
+        <arg name="Y" value="$(arg Y)"/>
+        <arg name="world" value="$(arg world)"/>
+        <arg name="vehicle" value="$(arg vehicle)"/>
+        <arg name="sdf" value="$(arg sdf)"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="interactive" value="$(arg interactive)"/>
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="verbose" value="$(arg verbose)"/>
+        <arg name="paused" value="$(arg paused)"/>
+        <arg name="respawn_gazebo" value="$(arg respawn_gazebo)"/>
+    </include>
+    <!-- MAVROS -->
+    <include file="$(find mavros)/launch/px4.launch">
+        <!-- GCS link is provided by SITL -->
+        <arg name="gcs_url" value=""/>
+        <arg name="fcu_url" value="$(arg fcu_url)"/>
+        <arg name="respawn_mavros" value="$(arg respawn_mavros)"/>
+    </include>
+</launch>
