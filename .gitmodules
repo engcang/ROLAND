@@ -1,0 +1,9 @@
+[submodule "gazebosensorplugins"]
+	path = gazebosensorplugins
+	url = https://github.com/valentinbarral/gazebosensorplugins
+[submodule "rosmsgs"]
+	path = rosmsgs
+	url = https://github.com/valentinbarral/rosmsgs
+[submodule "tf_to_trajectory"]
+	path = tf_to_trajectory
+	url = https://github.com/engcang/tf_to_trajectory

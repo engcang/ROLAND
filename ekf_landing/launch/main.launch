@@ -8,7 +8,7 @@
 
     <group ns="jackal">
       <arg name="robot_name" value="jackal" />
-      <param name="robot_description" command="$(find xacro)/xacro '$(find jackal_package_for_gazebo)/urdf/jackal_hanjeon.urdf.xacro'"/>
+      <param name="robot_description" command="$(find xacro)/xacro '$(find jackal_package_for_gazebo)/urdf/jackal.urdf.xacro'"/>
       <param name="tf_prefix" value="$(arg robot_name)" />
       <arg name="init_pose" value="-x 2.0 -y -0.0 -z 0.5 -Y 0" />
       <node name="spawn_rosbot_model" pkg="gazebo_ros" type="spawn_model"
@@ -49,10 +49,9 @@
     <!-- vehicle model and world -->
     <arg name="est" default="ekf2"/>
     <arg name="vehicle" default="iris"/>
-    <arg name="sensor" default="horizontal_drone_d435i_t265"/>
+    <arg name="sensor" default="kaist_url_drone_sensors"/>
     <arg name="world" default="empty.world"/>
-    <arg name="sdf" default="/home/mason/Desktop/mavros/hanjeon/$(arg sensor)/$(arg sensor).sdf"/>
-<!--    <arg name="sdf" default="/home/mason/Firmware/Tools/sitl_gazebo/models/iris/iris.sdf"/>-->
+    <arg name="sdf" default="$(find ekf_landing)/../gazebo_model_and_world/$(arg sensor)/$(arg sensor).sdf"/>
 
     <!-- gazebo configs -->
     <arg name="gui" default="true"/>

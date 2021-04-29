@@ -47,7 +47,23 @@
     + `$ sudo apt install ros-<distro>-desktop-full`
 + PX4-SITL: [here](https://github.com/PX4/PX4-SITL_gazebo)
     + Installation: [here](https://github.com/engcang/mavros-gazebo-application#installation)
-+ `tf_to_trajectory` pacakge from [here](https://github.com/engcang/tf_to_trajectory)
++ This repo, with submodules including 
+    + [uwb gazebo plugin](https://github.com/valentinbarral/gazebosensorplugins)
+    + [uwb ROS msg](https://github.com/valentinbarral/rosmsgs)
+    + `tf_to_trajectory` pacakge from [here, myself](https://github.com/engcang/tf_to_trajectory)
+~~~shell
+$ git clone --recursive https://github.com/engcang/iccas2021
+or
+$ git clone https://github.com/engcang/iccas2021
+$ cd iccas2021
+$ git submodule update --init --recursive
+~~~
+
++ [Important] Set gazebo model path
+~~~shell
+$ echo "export GAZEBO_MODEL_PATH=:/home/<your_pcname>/<your_workspace>/src/iccas2021/gazebo_model_and_world:$GAZEBO_MODEL_PATH" >> ~/.bashrc
+$ . ~/.bashrc
+~~~
 
 <br>
 
