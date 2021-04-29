@@ -18,7 +18,7 @@
     </joint>
     <include>
       <uri>model://uwb</uri>
-      <pose>0.0 0 0.08 0 0 0</pose>
+      <pose>0.0 0 -0.09 0 0 0</pose>
     </include>
     <joint name="uwb_joint" type="fixed">
       <child>uwb::uwb_link</child>

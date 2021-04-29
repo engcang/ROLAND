@@ -27,12 +27,11 @@
 + box to 3d PCL RGBD code
 + PCL average center point
 + kalman filter
-+ UWB on Jackal and Drone
-+ world, model(Drone with UWB and camera)
++ world - map, floor
 
 <br>
 
-## RGBD: 6m, UWB: 15m, bbox further than 6m-> Z=UWB
+## RGBD: 6m, UWB: 10m, bbox further than 6m-> Z=UWB
 
 <br>
 
@@ -47,7 +46,7 @@
     + `$ sudo apt install ros-<distro>-desktop-full`
 + PX4-SITL: [here](https://github.com/PX4/PX4-SITL_gazebo)
     + Installation: [here](https://github.com/engcang/mavros-gazebo-application#installation)
-+ This repo, with submodules including 
++ This repo, which is including submodules as belows:
     + [uwb gazebo plugin](https://github.com/valentinbarral/gazebosensorplugins)
     + [uwb ROS msg](https://github.com/valentinbarral/rosmsgs)
     + `tf_to_trajectory` pacakge from [here, myself](https://github.com/engcang/tf_to_trajectory)
@@ -71,3 +70,4 @@ $ . ~/.bashrc
 + ROS-YOLO using OpenCV/OpenVINO code: from [here](https://github.com/engcang/ros-yolo-sort/blob/master/YOLO_and_ROS_ver/ros_opencv_dnn.py)
 + Jackal Gazebo model: from [here](https://github.com/jackal)
 + Drone and Jackal controll joystick code: from [here](https://github.com/engcang/mavros-gazebo-application/blob/master/mavros_joy_controller.py), also refer [here](https://github.com/engcang/mavros-gazebo-application/blob/master/README.md#mission--joystick-controller---supports-kobuki-and-jackal)
++ UWB Gazebo sensor plugin and message from [uwb gazebo plugin](https://github.com/valentinbarral/gazebosensorplugins) and [uwb ROS msg](https://github.com/valentinbarral/rosmsgs)

@@ -130,7 +130,7 @@
       <geometry>
         <mesh filename="package://jackal_package_for_gazebo/meshes/jackal-base.stl"/>
       </geometry>
-      <material name="dark_grey" />
+      <material name="dark_g3rey" />
     </visual>
     <collision>
       <origin xyz="0 0 ${chassis_height/2}"/>
@@ -158,7 +158,7 @@
       <material name="yellow" />
     </visual>
   </link>
-  <joint name="front_fender_joint" type="fixed">
+  <joint name="front_fender_3joint" type="fixed">
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <parent link="chassis_link" />
     <child link="front_fender_link" />
@@ -238,16 +238,16 @@
   </gazebo>
 
 <!-- UWB plugin -->
-<!--  <gazebo>-->
-<!--    <plugin name='libgtec_uwb_plugin' filename='libgtec_uwb_plugin.so'>-->
-<!--      <update_rate>25</update_rate>-->
-<!--      <nlosSoftWallWidth>0.25</nlosSoftWallWidth>-->
-<!--      <tag_z_offset>0.3</tag_z_offset>-->
-<!--      <tag_link>base_link</tag_link>-->
-<!--      <anchor_prefix>jackal</anchor_prefix>-->
-<!--      <all_los>false</all_los>-->
-<!--      <tag_id>1</tag_id>-->
-<!--    </plugin>-->
-<!--  </gazebo>-->
+  <gazebo>
+    <plugin name='libgtec_uwb_plugin' filename='libgtec_uwb_plugin.so'>
+      <update_rate>25</update_rate>
+      <nlosSoftWallWidth>0.25</nlosSoftWallWidth>
+      <tag_z_offset>0.3</tag_z_offset>
+      <tag_link>base_link</tag_link>
+      <anchor_prefix>iris</anchor_prefix>
+      <all_los>false</all_los>
+      <tag_id>1</tag_id>
+    </plugin>
+  </gazebo>
 
 </robot>

@@ -32,7 +32,7 @@
             <size>0.41 0.41 0.17</size>
           </box>
           <mesh>
-            <uri>model://KAIST_URL_drone/materials/frame.stl</uri>
+            <uri>model://kaist_url_drone/materials/frame.stl</uri>
           </mesh>
         </geometry>
         <surface>
@@ -59,13 +59,13 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>model://KAIST_URL_drone/materials/frame.dae</uri>
+            <uri>model://kaist_url_drone/materials/frame.dae</uri>
           </mesh>
         </geometry>
         <material>
           <script>
             <name>frame</name>
-            <uri>model://KAIST_URL_drone/materials/frame.dae</uri>
+            <uri>model://kaist_url_drone/materials/frame.dae</uri>
           </script>
         </material>
       </visual>
@@ -121,7 +121,7 @@
       <visual name='rotor_1_visual'>
         <geometry>
           <mesh>
-            <uri>model://KAIST_URL_drone/materials/cw.stl</uri>
+            <uri>model://kaist_url_drone/materials/cw.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -167,7 +167,7 @@
         <pose frame=''>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
-            <uri>model://KAIST_URL_drone/materials/cw.stl</uri>
+            <uri>model://kaist_url_drone/materials/cw.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -213,7 +213,7 @@
         <pose frame=''>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
-            <uri>model://KAIST_URL_drone/materials/ccw.stl</uri>
+            <uri>model://kaist_url_drone/materials/ccw.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -259,7 +259,7 @@
         <pose frame=''>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
-            <uri>model://KAIST_URL_drone/materials/cw.stl</uri>
+            <uri>model://kaist_url_drone/materials/cw.stl</uri>
           </mesh>
         </geometry>
         <material>

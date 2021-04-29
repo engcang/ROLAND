@@ -6,8 +6,8 @@
 
 <!--jackal!!-->
 
-    <group ns="jackal">
-      <arg name="robot_name" value="jackal" />
+    <group ns="jackal1">
+      <arg name="robot_name" value="jackal1" />
       <param name="robot_description" command="$(find xacro)/xacro '$(find jackal_package_for_gazebo)/urdf/jackal.urdf.xacro'"/>
       <param name="tf_prefix" value="$(arg robot_name)" />
       <arg name="init_pose" value="-x 2.0 -y -0.0 -z 0.5 -Y 0" />
@@ -65,7 +65,13 @@
     <!-- PX4 configs -->
     <arg name="interactive" default="true"/>
     <!-- PX4 SITL and Gazebo -->
-    <include file="$(find px4)/launch/posix_sitl.launch">
+<!--important-->
+<!--important-->
+<!--important-->
+    <include file="$(find ekf_landing)/launch/sitl_model_name_change.launch">
+<!--important-->
+<!--important-->
+<!--important-->
         <arg name="x" value="$(arg x)"/>
         <arg name="y" value="$(arg y)"/>
         <arg name="z" value="$(arg z)"/>
