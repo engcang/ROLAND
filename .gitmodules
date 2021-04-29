@@ -1,6 +1,3 @@
-[submodule "gazebosensorplugins"]
-	path = gazebosensorplugins
-	url = https://github.com/valentinbarral/gazebosensorplugins
 [submodule "rosmsgs"]
 	path = rosmsgs
 	url = https://github.com/valentinbarral/rosmsgs
