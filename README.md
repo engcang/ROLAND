@@ -61,6 +61,7 @@ $ git submodule update --init --recursive
 + [Important] Set gazebo model path
 ~~~shell
 $ echo "export GAZEBO_MODEL_PATH=:/home/<your_pcname>/<your_workspace>/src/iccas2021/gazebo_model_and_world:$GAZEBO_MODEL_PATH" >> ~/.bashrc
+$ echo "export LD_LIBRARY_PATH=:/home/<your_pcname>/<your_workspace>/devel/lib:$LD_LIBRARY_PATH" >> ~/.bashrc
 $ . ~/.bashrc
 ~~~
 
