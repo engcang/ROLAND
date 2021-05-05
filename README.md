@@ -49,7 +49,7 @@
 + This repo, which is including submodules as belows:
     + [uwb gazebo plugin](https://github.com/valentinbarral/gazebosensorplugins)
     + [uwb ROS msg](https://github.com/valentinbarral/rosmsgs)
-    + `tf_to_trajectory` pacakge from [here, myself](https://github.com/engcang/tf_to_trajectory)
+    + `tf_to_trajectory` pacakge from [here (myself)](https://github.com/engcang/tf_to_trajectory)
 ~~~shell
 $ git clone --recursive https://github.com/engcang/iccas2021
 or
@@ -68,7 +68,7 @@ $ . ~/.bashrc
 <br>
 
 ### Components
-+ ROS-YOLO using OpenCV/OpenVINO code: from [here](https://github.com/engcang/ros-yolo-sort/blob/master/YOLO_and_ROS_ver/ros_opencv_dnn.py)
++ ROS-YOLO using OpenCV/OpenVINO code: from [here (myself)](https://github.com/engcang/ros-yolo-sort/blob/master/YOLO_and_ROS_ver/ros_opencv_dnn.py)
 + Jackal Gazebo model: from [here](https://github.com/jackal)
-+ Drone and Jackal controll joystick code: from [here](https://github.com/engcang/mavros-gazebo-application/blob/master/mavros_joy_controller.py), also refer [here](https://github.com/engcang/mavros-gazebo-application/blob/master/README.md#mission--joystick-controller---supports-kobuki-and-jackal)
++ Drone and Jackal controll joystick code: from [here (myself)](https://github.com/engcang/mavros-gazebo-application/blob/master/mavros_joy_controller.py), also refer [here](https://github.com/engcang/mavros-gazebo-application/blob/master/README.md#mission--joystick-controller---supports-kobuki-and-jackal)
 + UWB Gazebo sensor plugin and message from [uwb gazebo plugin](https://github.com/valentinbarral/gazebosensorplugins) and [uwb ROS msg](https://github.com/valentinbarral/rosmsgs)
