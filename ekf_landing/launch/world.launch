@@ -23,7 +23,7 @@
       <node name="controller_spawner" pkg="controller_manager" type="spawner" args="jackal_joint_publisher jackal_velocity_controller" />
     </group>
 
-<!--    <node name="rvizualizer" pkg="rviz" type="rviz" args="-d /home/mason/Desktop/mavros/hanjeon/rviz.rviz"/>-->
+
     <param name="/camera_link_name" value="/d435i/depth_camera_link"/>
     <node name="broadcaster" pkg="ekf_landing" type="tf_broadcaster.py"/>
 
@@ -40,9 +40,9 @@
     <param name="/append_rate" value="3"/>
     <node name="drone_path" pkg="tf_to_trajectory" type="tf_to_path.py"/>
 
-    <arg name="x" default="3.0"/>
+    <arg name="x" default="0.0"/>
     <arg name="y" default="0.0"/>
-    <arg name="z" default="1.5"/>
+    <arg name="z" default="0.5"/>
     <arg name="R" default="0"/>
     <arg name="P" default="0"/>
     <arg name="Y" default="0"/>

@@ -37,5 +37,5 @@ include_directories(
 
 catkin_package()
 
-#add_executable(ekf_landing_node src/main.cpp)
-#target_link_libraries(ekf_landing_node ${catkin_LIBRARIES} ${EIGEN3_LIBS} ${OpenCV_LIBS})
+add_executable(ekf_landing_node src/main.cpp)
+target_link_libraries(ekf_landing_node ${catkin_LIBRARIES} ${EIGEN3_LIBS} ${OpenCV_LIBS})
