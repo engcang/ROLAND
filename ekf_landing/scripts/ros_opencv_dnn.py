@@ -37,11 +37,8 @@ class cv_yolo_ros():
         self.nms_threshold = rospy.get_param("/nms_threshold", 0.4)
 
         self.class_file = rospy.get_param("/class_file", "class.txt")
-        print(self.class_file)
         self.weight_file = rospy.get_param("/weight_file", "yolov4-tiny-3l-obj_final.weights")
-        print(self.weight_file)
         self.cfg_file = rospy.get_param("/cfg_file", "yolov4-tiny-3l-obj.cfg")
-        print(self.cfg_file)
         self.backend = rospy.get_param("/backend", cv2.dnn.DNN_BACKEND_CUDA)
     ### cv2.dnn.DNN_BACKEND_CUDA for GPU, 
     ### cv2.dnn.DNN_BACKEND_OPENCV for CPU
