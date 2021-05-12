@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <light type="directional" name="sun_2">
+    <cast_shadows>true</cast_shadows>
+    <pose>0 0 500 0 0 0</pose>
+    <diffuse>0.95 0.95 0.95 1</diffuse>
+    <specular>0.3 0.3 0.3 1</specular>
+    <attenuation>
+      <range>2000</range>
+      <constant>1.0</constant>
+      <linear>0.0</linear>
+      <quadratic>0.0</quadratic>
+    </attenuation>
+    <direction>-0.1 0.05 -1.0</direction>
+  </light>
+</sdf>
