@@ -152,8 +152,8 @@ Visualization Manager:
     - Alpha: 0.20000000298023224
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: -0.026788488030433655
-        Min Value: -0.2802772521972656
+        Max Value: -0.004812657833099365
+        Min Value: -0.25624898076057434
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -171,8 +171,8 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 2
-      Size (m): 0.05000000074505806
+      Size (Pixels): 2.5
+      Size (m): 0.019999999552965164
       Style: Points
       Topic: /converted_pcl
       Unreliable: false
@@ -374,10 +374,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5403984189033508
+      Pitch: 0.4753984808921814
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.455472946166992
+      Yaw: 4.2504682540893555
     Saved: ~
 Window Geometry:
   Displays:

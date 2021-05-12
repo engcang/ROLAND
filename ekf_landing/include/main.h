@@ -102,6 +102,17 @@ class ekf_land{
 };
 
 void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
+  // MatrixXd A = MatrixXd::Zero(row,3);
+  // A << x1, y1, z1,
+  //   x1, y1, z1,
+  //   x1, y1, z1;
+
+  //   VectorXd b(row);
+  //   VectorXd x_(3);
+  //   b << 1, 1, 1, ... 1;
+  //   x_ = A.lu().solve(b);
+  // x(1) = a, x(2) = b, x(3) = c;
+
   boxes=*msg;
   depth_cvt_pcl.clear();
 
@@ -129,6 +140,9 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
         }
       }
     }
+
+
+
     box_check=true;
     pcl_pub.publish(cloud2msg(depth_cvt_pcl, pcl_base));
 
