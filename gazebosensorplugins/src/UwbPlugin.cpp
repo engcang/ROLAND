@@ -1071,7 +1071,7 @@ namespace gazebo
                         }
 
                         visualization_msgs::Marker marker;
-                        marker.header.frame_id = "world";
+                        marker.header.frame_id = "map";
                         marker.header.stamp = ros::Time();
                         marker.id = aid;
                         marker.type = visualization_msgs::Marker::CYLINDER;
