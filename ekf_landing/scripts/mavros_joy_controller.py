@@ -187,7 +187,7 @@ def input(rbt):
             print("Angle(Degree): roll: %.2f pitch: %.2f yaw: %.2f \n"%(rbt.roll/np.pi*180, rbt.pitch/np.pi*180, rbt.yaw/np.pi*180)) #radian : +-pi
     else:
         k_vel_input = Twist()
-        k_vel_input.linear.x= rbt.joy.axes[4]*2
+        k_vel_input.linear.x= rbt.joy.axes[4]*1.2
         k_vel_input.angular.z = yaw_rate*(rbt.joy.axes[0])
 
         rbt.mobile_robot_vel_pub.publish(k_vel_input)

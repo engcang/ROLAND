@@ -10,7 +10,7 @@ int main(int argc, char **argv)
 
     signal(SIGINT, signal_handler); // to exit program when ctrl+c
 
-    ros::AsyncSpinner spinner(3); // Use 7 threads -> 3 callbacks + 0 Timer callbacks
+    ros::AsyncSpinner spinner(4); // Use 7 threads -> 3 callbacks + 0 Timer callbacks
     spinner.start();
     ros::waitForShutdown();
 

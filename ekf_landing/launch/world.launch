@@ -23,6 +23,7 @@
       <node name="controller_spawner" pkg="controller_manager" type="spawner" args="jackal_joint_publisher jackal_velocity_controller" />
     </group>
 
+    <include file="$(find ekf_landing)/launch/robot_pose_ekf.launch"/>
 
     <param name="/camera_link_name" value="/d435i/depth_camera_link"/>
     <node name="broadcaster" pkg="ekf_landing" type="tf_broadcaster.py"/>

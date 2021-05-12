@@ -1,30 +1,4 @@
 # TODO
-+ Jackal encoder gazebo
-~~~xml
-  <gazebo>
-    <plugin filename="libgazebo_ros_skid_steer_drive.so" name="skid_steer_drive_controller">
-<!--      <robotNamespace></robotNamespace>--> 
-      <updateRate>10.0</updateRate>
-      <robotBaseFrame>base_link</robotBaseFrame>
-      <wheelSeparation>0.1</wheelSeparation>
-      <wheelDiameter>0.08</wheelDiameter>
-      <torque>0.5</torque>
-      <leftFrontJoint>front_left_wheel_hinge</leftFrontJoint>
-      <rightFrontJoint>front_right_wheel_hinge</rightFrontJoint>
-      <leftRearJoint>rear_left_wheel_hinge</leftRearJoint>
-      <rightRearJoint>rear_right_wheel_hinge</rightRearJoint>
-      <topicName>cmd_vel</topicName>
-      <commandTopic>cmd_vel</commandTopic>
-      <broadcastTF>true</broadcastTF>
-      <odometryTopic>odom</odometryTopic>
-      <odometryFrame>odom</odometryFrame>
-      <covariance_x>0.000100</covariance_x>
-      <covariance_y>0.000100</covariance_y>
-      <covariance_yaw>0.010000</covariance_yaw>
-    </plugin>
-  </gazebo>
-~~~
-+ box to 3d PCL RGBD code
 + PCL average center point
 + kalman filter
 + world - map, floor
@@ -44,6 +18,10 @@
 + ROS and Gazebo
     + refer [here](http://wiki.ros.org/ROS/Installation)
     + `$ sudo apt install ros-<distro>-desktop-full`
++ `robot-pose-ekf` package, refer [here](http://wiki.ros.org/robot_pose_ekf)
+~~~shell
+$ sudo apt install ros-<distro>-robot-pose-ekf
+~~~
 + PX4-SITL: [here](https://github.com/PX4/PX4-SITL_gazebo)
     + Installation: [here](https://github.com/engcang/mavros-gazebo-application#installation)
 + This repo, which is including submodules as belows:

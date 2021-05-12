@@ -42,15 +42,17 @@ using namespace Eigen;
 class ekf_land{
   public:
     sensor_msgs::Image depth;
+    ekf_landing::bboxes boxes;
     cv_bridge::CvImagePtr depth_ptr;
-    pcl::PointCloud<pcl::PointXYZ> depth_cvt_pcl, depth_cvt_pcl_empty;
-    pcl::PointXYZ p3d, p3d_empty;
+    pcl::PointCloud<pcl::PointXYZ> depth_cvt_pcl;
+    pcl::PointXYZ p3d;
 
-    bool pcl_check=false, tf_check=false, box_check=false, body_t_cam_check=false;
+    bool depth_check=false, depth2_check=false, tf_check=false, box_check=false, body_t_cam_check=false;
     std::string depth_topic, bboxes_topic, pcl_topic, pcl_base, body_base, agg_pcl_base; 
 
     double f_x=0.0, f_y=0.0, c_x=0.0, c_y=0.0, depth_max_range=0.0, hfov=0.0;
     double curr_roll=0.0, curr_pitch=0.0, curr_yaw=0.0;
+    double scale_factor=1.0;
 
     ///// octomap
     Matrix4f map_t_cam = Matrix4f::Identity();
@@ -63,6 +65,7 @@ class ekf_land{
     ros::Subscriber tf_sub;
     ros::Subscriber yolo_sub;
     ros::Publisher pcl_pub;
+    ros::Publisher center_pub;
 
     // void odom_callback(const nav_msgs::Odometry::ConstPtr& msg);
     void depth_callback(const sensor_msgs::Image::ConstPtr& msg);
@@ -78,11 +81,11 @@ class ekf_land{
       nh.param("/depth_cy", c_y, 240.5);
       nh.param("/hfov", hfov, 1.5); // radian
       nh.param<std::string>("/depth_topic", depth_topic, "/camera/depth/image_raw");
-      nh.param<std::string>("/bboxes_topic", bboxes_topic, "bboxes");
+      nh.param<std::string>("/bboxes_topic", bboxes_topic, "/bboxes");
 
-      nh.param<std::string>("/pcl_topic", pcl_topic, "converted_pcl");
-      nh.param<std::string>("/pcl_base", pcl_base, "camera_link");
-      nh.param<std::string>("/body_base", body_base, "base_link");
+      nh.param<std::string>("/pcl_topic", pcl_topic, "/converted_pcl");
+      nh.param<std::string>("/pcl_base", pcl_base, "/camera_link");
+      nh.param<std::string>("/body_base", body_base, "/base_link");
       nh.param<std::string>("/agg_pcl_base", agg_pcl_base, "map");
 
       ///// sub 
@@ -92,77 +95,62 @@ class ekf_land{
 
       ///// pub
       pcl_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic, 10);
+      center_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic+"/center", 10);
 
       ROS_WARN("Class generated, started node...");
     }
 };
 
 void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
+  boxes=*msg;
+  depth_cvt_pcl.clear();
+  int count=0;
+  pcl::PointXYZ p3d_center;
+  p3d_center.x = 0; p3d_center.y = 0; p3d_center.z = 0;
+
+  if(depth_check){
+    cv::Mat depth_img = depth_ptr->image;
+    for (int l=0; l < boxes.bboxes.size(); l++){
+      for (int j=boxes.bboxes[l].x; j < boxes.bboxes[l].x + boxes.bboxes[l].width; ++j){
+        for (int i=boxes.bboxes[l].y; i < boxes.bboxes[l].y + boxes.bboxes[l].height; ++i){
+          float temp_depth = depth_img.at<float>(i,j); //float!!! double makes error here!!! because encoding is "32FC", float
+          if (std::isnan(temp_depth)){
+            continue;}
+          else if (temp_depth/scale_factor >= 0.2 and temp_depth/scale_factor <=depth_max_range){ // scale factor = 1 for 32FC, 1000 for 16UC
+            p3d.z = (temp_depth/scale_factor); 
+            p3d.x = ( j - c_x ) * p3d.z / f_x;
+            p3d.y = ( i - c_y ) * p3d.z / f_y;
+            depth_cvt_pcl.push_back(p3d);
+            p3d_center.x = p3d_center.x + p3d.x;
+            p3d_center.y = p3d_center.y + p3d.y;
+            p3d_center.z = p3d_center.z + p3d.z;
+            count++;
+          }
+        }
+      }
+    }
+    box_check=true;
+    pcl_pub.publish(cloud2msg(depth_cvt_pcl, pcl_base));
+
+    pcl::PointCloud<pcl::PointXYZ> depth_cvt_pcl_center;
+    depth_cvt_pcl_center.push_back(p3d_center);
+    center_pub.publish(cloud2msg(depth_cvt_pcl_center, pcl_base));
+  }
 }
 
 void ekf_land::depth_callback(const sensor_msgs::Image::ConstPtr& msg){
   depth=*msg;
   try {
-    // tic(); 
     depth_cvt_pcl.clear();
-    // depth_cvt_pcl_empty.clear();
     if (depth.encoding=="32FC1"){
       depth_ptr = cv_bridge::toCvCopy(depth, "32FC1"); // == sensor_msgs::image_encodings::TYPE_32FC1
-      for (int i=0; i<depth_ptr->image.rows; i++)
-      {
-        for (int j=0; j<depth_ptr->image.cols; j++)
-        {
-          float temp_depth = depth_ptr->image.at<float>(i,j);
-          if (std::isnan(temp_depth)){
-            // p3d_empty.z = depth_max_range * cos(abs(depth_ptr->image.cols/2.0 - j)/(depth_ptr->image.cols/2.0)*hfov/2.0) * cos(abs(depth_ptr->image.rows/2.0 - i)/(depth_ptr->image.rows/2.0*0.488692191)); //float!!! double makes error here!!! because encoding is "32FC", float
-            // p3d_empty.z = depth_max_range * cos(abs(depth_ptr->image.cols/2.0 - j)/(depth_ptr->image.cols/2.0)*hfov/2.0); //float!!! double makes error here!!! because encoding is "32FC", float
-            // p3d_empty.x = ( j - c_x ) * p3d_empty.z / f_x;
-            // p3d_empty.y = ( i - c_y ) * p3d_empty.z / f_y;
-            // depth_cvt_pcl_empty.push_back(p3d_empty);
-            continue;
-          }
-          else if (temp_depth >= 0.2 and temp_depth <=depth_max_range){
-            p3d.z = temp_depth; //float!!! double makes error here!!! because encoding is "32FC", float
-            p3d.x = ( j - c_x ) * p3d.z / f_x;
-            p3d.y = ( i - c_y ) * p3d.z / f_y;
-            depth_cvt_pcl.push_back(p3d);
-          }
-        }
-      }
+      scale_factor=1.0;
     }
-    else if (depth.encoding=="16UC1") // uint16_t (stdint.h) or ushort or unsigned_short
-    {
-      depth_ptr = cv_bridge::toCvCopy(depth, "16UC1"); // == sensor_msgs::image_encodings::TYPE_32FC1
-      for (int i=0; i<depth_ptr->image.rows; i++)
-      {
-        for (int j=0; j<depth_ptr->image.cols; j++)
-        {
-          // if (115 <= i && i <= 185){ //prop guard
-          //     if( j <= 125 || 515<= j){
-          //         continue;
-          //     }
-          // }
-          float temp_depth = depth_ptr->image.at<ushort>(i,j);
-          if (std::isnan(temp_depth)){
-            // p3d_empty.z = depth_max_range * cos(abs(depth_ptr->image.cols/2.0 - j)/(depth_ptr->image.cols/2.0)*0.75) * cos(abs(depth_ptr->image.rows/2.0 - i)/(depth_ptr->image.rows/2.0*0.488692191)); //float!!! double makes error here!!! because encoding is "32FC", float
-            // p3d_empty.z = depth_max_range * cos(abs(depth_ptr->image.cols/2.0 - j)/(depth_ptr->image.cols/2.0)*hfov/2.0); //float!!! double makes error here!!! because encoding is "32FC", float
-            // p3d_empty.x = ( j - c_x ) * p3d_empty.z / f_x;
-            // p3d_empty.y = ( i - c_y ) * p3d_empty.z / f_y;
-            // depth_cvt_pcl_empty.push_back(p3d_empty);
-            continue;
-          }
-          else if (temp_depth/1000.0 >= 0.1 and temp_depth/1000.0 <=depth_max_range){
-            p3d.z = (temp_depth/1000.0); //float!!! double makes error here!!! because encoding is "32FC", float
-            p3d.x = ( j - c_x ) * p3d.z / f_x;
-            p3d.y = ( i - c_y ) * p3d.z / f_y;
-            depth_cvt_pcl.push_back(p3d);
-          }
-        }
-      }
+    else if (depth.encoding=="16UC1"){ // uint16_t (stdint.h) or ushort or unsigned_short
+      depth_ptr = cv_bridge::toCvCopy(depth, "16UC1"); // == sensor_msgs::image_encodings::TYPE_16UC1
+      scale_factor=1000.0;
     }
-    pcl_pub.publish(cloud2msg(depth_cvt_pcl, pcl_base));
-    pcl_check=true;
-    // toc();
+    depth_check=true;
   }
   catch (cv_bridge::Exception& e) {
     ROS_ERROR("Error to cvt depth img");
@@ -191,7 +179,6 @@ void ekf_land::tf_callback(const tf2_msgs::TFMessage::ConstPtr& msg){
       map_t_body(2,3) = msg->transforms[l].transform.translation.z;
       map_t_body(3,3) = 1.0;
 
-      ///// for tf between local-planner(map) and body -> roll=0, pitch=0 tf for simplification!!!
       m.getRPY(curr_roll, curr_pitch, curr_yaw);
     }
     if (msg->transforms[l].header.frame_id==body_base && !body_t_cam_check){
@@ -218,18 +205,5 @@ void ekf_land::tf_callback(const tf2_msgs::TFMessage::ConstPtr& msg){
   map_t_cam = map_t_body * body_t_cam ;
   tf_check=true;
 }
-
-    // depth_cvt_pcl_map.clear();
-    // depth_cvt_pcl_map_empty.clear();
-    // pcl::transformPointCloud(depth_cvt_pcl, depth_cvt_pcl_map, map_t_cam); //essential for agg_pcl and octomap(based on world naturally!)
-    // pcl::transformPointCloud(depth_cvt_pcl_empty, depth_cvt_pcl_map_empty, map_t_cam); //essential for agg_pcl and octomap(based on world naturally!)
-
-    // octo_pcl_pub_em->push_back(pcl::PointXYZ(it.getCoordinate().x(), it.getCoordinate().y(), it.getCoordinate().z()));
-    // octomap_pub.publish(cloud2msg(*octo_pcl_pub, agg_pcl_base));
-    //   pcl::PointCloud<pcl::PointXYZ>::Ptr fron_cells_sensor_end_pcl_pub(new pcl::PointCloud<pcl::PointXYZ>());
-    //   for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it = depth_cvt_pcl_map_empty.begin(); it!=depth_cvt_pcl_map_empty.end(); ++it){
-    //       fron_cells_sensor_end_pcl_pub->push_back(pcl::PointXYZ(fron_pt.x(), fron_pt.y(), fron_pt.z()));
-    //   }
-    //   frontier_sensor_end_pub.publish(cloud2msg(*fron_cells_sensor_end_pcl_pub, agg_pcl_base));
 
 #endif

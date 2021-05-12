@@ -28,8 +28,8 @@
   <param name="/inference_rate" value="30"/>
   <param name="/img_in_topic" value="/d435i/stereo_ir/left/image_raw"/>
   <param name="/img_out" value="True"/>
-  <param name="/img_out_topic" value="detected"/>
-  <param name="/bbox_out_topic" value="bboxes"/>
+  <param name="/img_out_topic" value="/detected"/>
+  <param name="/bbox_out_topic" value="/bboxes"/>
   <param name="/confidence_threshold" value="0.8"/>
   <param name="/nms_threshold" value="0.4"/>
   <param name="/class_file" value="$(find ekf_landing)/scripts/class.txt"/>
