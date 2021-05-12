@@ -104,11 +104,11 @@ class ekf_land{
 void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
   boxes=*msg;
   depth_cvt_pcl.clear();
-  int count=0;
-  pcl::PointXYZ p3d_center;
-  p3d_center.x = 0; p3d_center.y = 0; p3d_center.z = 0;
 
   if(depth_check){
+    int count=0;
+    pcl::PointXYZ p3d_center;
+    p3d_center.x = 0; p3d_center.y = 0; p3d_center.z = 0;
     cv::Mat depth_img = depth_ptr->image;
     for (int l=0; l < boxes.bboxes.size(); l++){
       for (int j=boxes.bboxes[l].x; j < boxes.bboxes[l].x + boxes.bboxes[l].width; ++j){
@@ -133,6 +133,7 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
     pcl_pub.publish(cloud2msg(depth_cvt_pcl, pcl_base));
 
     pcl::PointCloud<pcl::PointXYZ> depth_cvt_pcl_center;
+    p3d_center.x /= count; p3d_center.y /= count; p3d_center.z /= count;
     depth_cvt_pcl_center.push_back(p3d_center);
     center_pub.publish(cloud2msg(depth_cvt_pcl_center, pcl_base));
   }

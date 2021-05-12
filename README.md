@@ -1,8 +1,7 @@
 # TODO
-+ PCL average center point
-    + floor removing?????
++ floor removing (for PCL average center point)
 + kalman filter
-    + VIO, UWB, center point(after floor removing)
+    + VIO, UWB, center point
 
 <br>
 
