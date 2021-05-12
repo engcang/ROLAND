@@ -1,7 +1,7 @@
 # TODO
 + PCL average center point
+    + floor removing?????
 + kalman filter
-+ world - map, floor
 
 <br>
 
