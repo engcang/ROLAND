@@ -9,7 +9,9 @@
 #include <iostream> //cout
 #include <math.h> // pow
 #include <vector>
-#include <chrono> 
+#include <chrono>
+#include <algorithm> // min max
+#include <random> //random
 #include <tf/LinearMath/Quaternion.h> // to Quaternion_to_euler
 #include <tf/LinearMath/Matrix3x3.h> // to Quaternion_to_euler
 
@@ -72,6 +74,7 @@ class ekf_land{
     void tf_callback(const tf2_msgs::TFMessage::ConstPtr& msg);
     void bbox_callback(const ekf_landing::bboxes::ConstPtr& msg);
 
+
     ekf_land(ros::NodeHandle& n) : nh(n){
       ///// params
       nh.param("/depth_max_range", depth_max_range, 5.0);
@@ -122,6 +125,51 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
     p3d_center.x = 0; p3d_center.y = 0; p3d_center.z = 0;
     cv::Mat depth_img = depth_ptr->image;
     for (int l=0; l < boxes.bboxes.size(); l++){
+
+      pcl::PointCloud<pcl::PointXYZ> ground_pcl;
+      int ground_count = 0;
+      int ground_num = 10;
+      int xlower = std::max(0, (int)boxes.bboxes[l].x - (int)(boxes.bboxes[l].width*0.5));
+      int xupper = std::min(depth_img.size().width , (int)boxes.bboxes[l].x + (int)(boxes.bboxes[l].width*1.5));
+      int ylower = std::max(0, (int)boxes.bboxes[l].y - (int)(boxes.bboxes[l].width*0.5));
+      int yupper = std::min(depth_img.size().height , (int)boxes.bboxes[l].y + (int)(boxes.bboxes[l].height*1.5));
+      
+      std::random_device rd; 
+      std::mt19937 mersenne(rd());
+      std::uniform_int_distribution<> xdist(xlower, xupper);
+      std::uniform_int_distribution<> ydist(ylower, yupper);
+      while (ground_count <= ground_num){
+        int j = xdist(mersenne);
+        int i = ydist(mersenne);
+        if (boxes.bboxes[l].x<j && j<boxes.bboxes[l].x + boxes.bboxes[l].width && boxes.bboxes[l].y<i && i<boxes.bboxes[l].y + boxes.bboxes[l].height){
+          continue;
+        }
+        float temp_depth = depth_img.at<float>(i,j);
+        if (std::isnan(temp_depth)){
+          continue;
+        }
+        else if (temp_depth/scale_factor >= 0.2 and temp_depth/scale_factor <=depth_max_range){ // scale factor = 1 for 32FC, 1000 for 16UC
+          p3d.z = (temp_depth/scale_factor); 
+          p3d.x = ( j - c_x ) * p3d.z / f_x;
+          p3d.y = ( i - c_y ) * p3d.z / f_y;
+
+          ground_pcl.push_back(p3d);
+          ground_count++;
+        }
+      }
+      MatrixXd A = MatrixXd::Zero(ground_num,3);
+      VectorXd b(ground_num);
+      VectorXd x_(3);
+      for (int i = 0; i < ground_num; i++)
+      {
+        A(i,0) = ground_pcl.at(i).x;
+        A(i,1) = ground_pcl.at(i).y;
+        A(i,2) = ground_pcl.at(i).z;
+        b(i) = 1;
+      }
+      x_ = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
+      
+      
       for (int j=boxes.bboxes[l].x; j < boxes.bboxes[l].x + boxes.bboxes[l].width; ++j){
         for (int i=boxes.bboxes[l].y; i < boxes.bboxes[l].y + boxes.bboxes[l].height; ++i){
           float temp_depth = depth_img.at<float>(i,j); //float!!! double makes error here!!! because encoding is "32FC", float
@@ -131,6 +179,12 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
             p3d.z = (temp_depth/scale_factor); 
             p3d.x = ( j - c_x ) * p3d.z / f_x;
             p3d.y = ( i - c_y ) * p3d.z / f_y;
+
+            float distance = abs(x_(0)*p3d.x + x_(1)*p3d.y + x_(2)*p3d.z - 1)/sqrtf(x_(0)*x_(0) + x_(1)*x_(1) + x_(2)*x_(2));
+            if(distance < 0.1f){
+              continue;
+            }
+
             depth_cvt_pcl.push_back(p3d);
             p3d_center.x = p3d_center.x + p3d.x;
             p3d_center.y = p3d_center.y + p3d.y;

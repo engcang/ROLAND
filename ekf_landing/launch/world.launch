@@ -32,7 +32,7 @@
     <param name="/mobile_robot_vel_topic" value="/jackal1/jackal_velocity_controller/cmd_vel"/>
     <node name="ctrl_joy" pkg="ekf_landing" type="mavros_joy_controller.py" output="screen"/>
     <node name="joy_ros" pkg="joy" type="joy_node">
-    <param name="/dev" value="/dev/input/js1"/>
+    <param name="/dev" value="/dev/input/js0"/>
     </node>
 
     <param name="/parent_frame_id" value="map"/>
