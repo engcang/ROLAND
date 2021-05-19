@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
     cv_bridge
     pcl_conversions
     pcl_ros
+    gtec_msgs
     message_generation
     message_runtime
 )

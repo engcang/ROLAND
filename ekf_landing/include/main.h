@@ -22,6 +22,8 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <ekf_landing/bbox.h>
 #include <ekf_landing/bboxes.h>
+#include <gtec_msgs/Ranging.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 #include <pcl/point_types.h>
 #include <pcl/PCLPointCloud2.h>
@@ -44,12 +46,16 @@ using namespace Eigen;
 class ekf_land{
   public:
     sensor_msgs::Image depth;
-    ekf_landing::bboxes boxes;
     cv_bridge::CvImagePtr depth_ptr;
     pcl::PointCloud<pcl::PointXYZ> depth_cvt_pcl;
+    
+    ekf_landing::bboxes boxes;
     pcl::PointXYZ p3d;
+    geometry_msgs::PoseWithCovarianceStamped mobile_pose;
+    gtec_msgs::Ranging uwb_measured;
 
-    bool depth_check=false, depth2_check=false, tf_check=false, box_check=false, body_t_cam_check=false;
+    bool depth_check=false, tf_check=false, box_check=false, body_t_cam_check=false;
+    bool mobile_check=false, uwb_check=false;
     std::string depth_topic, bboxes_topic, pcl_topic, pcl_base, body_base, agg_pcl_base; 
 
     double f_x=0.0, f_y=0.0, c_x=0.0, c_y=0.0, depth_max_range=0.0, hfov=0.0;
@@ -66,6 +72,8 @@ class ekf_land{
     ros::Subscriber depth_sub;
     ros::Subscriber tf_sub;
     ros::Subscriber yolo_sub;
+    ros::Subscriber uwb_sub;
+    ros::Subscriber mobile_sub;
     ros::Publisher pcl_pub;
     ros::Publisher center_pub;
 
@@ -73,6 +81,8 @@ class ekf_land{
     void depth_callback(const sensor_msgs::Image::ConstPtr& msg);
     void tf_callback(const tf2_msgs::TFMessage::ConstPtr& msg);
     void bbox_callback(const ekf_landing::bboxes::ConstPtr& msg);
+    void uwb_callback(const gtec_msgs::Ranging::ConstPtr& msg);
+    void mobile_robot_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
 
 
     ekf_land(ros::NodeHandle& n) : nh(n){
@@ -95,6 +105,8 @@ class ekf_land{
       depth_sub = nh.subscribe<sensor_msgs::Image>(depth_topic, 10, &ekf_land::depth_callback, this);
       tf_sub = nh.subscribe<tf2_msgs::TFMessage>("/tf", 10, &ekf_land::tf_callback, this);
       yolo_sub = nh.subscribe<ekf_landing::bboxes>(bboxes_topic, 10, &ekf_land::bbox_callback, this);
+      uwb_sub = nh.subscribe<gtec_msgs::Ranging>("/gtec/toa/ranging", 10, &ekf_land::uwb_callback, this);
+      mobile_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined", 10, &ekf_land::mobile_robot_callback, this);
 
       ///// pub
       pcl_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic, 10);
@@ -105,21 +117,10 @@ class ekf_land{
 };
 
 void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
-  // MatrixXd A = MatrixXd::Zero(row,3);
-  // A << x1, y1, z1,
-  //   x1, y1, z1,
-  //   x1, y1, z1;
-
-  //   VectorXd b(row);
-  //   VectorXd x_(3);
-  //   b << 1, 1, 1, ... 1;
-  //   x_ = A.lu().solve(b);
-  // x(1) = a, x(2) = b, x(3) = c;
-
   boxes=*msg;
   depth_cvt_pcl.clear();
 
-  if(depth_check){
+  if(depth_check){ // TODO: check if ground points are within box
     int count=0;
     pcl::PointXYZ p3d_center;
     p3d_center.x = 0; p3d_center.y = 0; p3d_center.z = 0;
@@ -128,11 +129,12 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
 
       pcl::PointCloud<pcl::PointXYZ> ground_pcl;
       int ground_count = 0;
+      int counter = 0;
       int ground_num = 10;
       int xlower = std::max(0, (int)boxes.bboxes[l].x - (int)(boxes.bboxes[l].width*0.5));
-      int xupper = std::min(depth_img.size().width , (int)boxes.bboxes[l].x + (int)(boxes.bboxes[l].width*1.5));
+      int xupper = std::min(depth_img.size().width-1 , (int)boxes.bboxes[l].x + (int)(boxes.bboxes[l].width*1.5));
       int ylower = std::max(0, (int)boxes.bboxes[l].y - (int)(boxes.bboxes[l].width*0.5));
-      int yupper = std::min(depth_img.size().height , (int)boxes.bboxes[l].y + (int)(boxes.bboxes[l].height*1.5));
+      int yupper = std::min(depth_img.size().height-1 , (int)boxes.bboxes[l].y + (int)(boxes.bboxes[l].height*1.5));
       
       std::random_device rd; 
       std::mt19937 mersenne(rd());
@@ -155,6 +157,10 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
 
           ground_pcl.push_back(p3d);
           ground_count++;
+          counter++;
+          if (counter>1000){
+            return ;
+          }
         }
       }
       MatrixXd A = MatrixXd::Zero(ground_num,3);
@@ -194,9 +200,6 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
         }
       }
     }
-
-
-
     box_check=true;
     pcl_pub.publish(cloud2msg(depth_cvt_pcl, pcl_base));
 
@@ -273,6 +276,20 @@ void ekf_land::tf_callback(const tf2_msgs::TFMessage::ConstPtr& msg){
   }
   map_t_cam = map_t_body * body_t_cam ;
   tf_check=true;
+}
+
+void ekf_land::uwb_callback(const gtec_msgs::Ranging::ConstPtr& msg){
+  if (msg->anchorId==1 && msg->tagId==0){
+    uwb_measured=*msg;
+    // uwb_measured.rss;
+    uwb_check=true;
+  }
+}
+void ekf_land::mobile_robot_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg){
+  mobile_pose=*msg;
+  // mobile_pose.pose.pose.position;
+  // mobile_pose.pose.pose.orientation;
+  mobile_check=true;
 }
 
 #endif
