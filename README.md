@@ -1,4 +1,5 @@
 # TODO
++ decide between encoder vs encoder+IMU filtered
 + kalman filter
     + center point
 

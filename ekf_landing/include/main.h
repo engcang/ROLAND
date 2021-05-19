@@ -24,6 +24,7 @@
 #include <ekf_landing/bboxes.h>
 #include <gtec_msgs/Ranging.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <nav_msgs/Odometry.h>
 
 #include <pcl/point_types.h>
 #include <pcl/PCLPointCloud2.h>
@@ -51,7 +52,8 @@ class ekf_land{
     
     ekf_landing::bboxes boxes;
     pcl::PointXYZ p3d;
-    geometry_msgs::PoseWithCovarianceStamped mobile_pose;
+    // geometry_msgs::PoseWithCovarianceStamped mobile_pose;
+    nav_msgs::Odometry mobile_pose;
     gtec_msgs::Ranging uwb_measured;
 
     bool depth_check=false, tf_check=false, body_t_cam_check=false;
@@ -102,7 +104,8 @@ class ekf_land{
     void tf_callback(const tf2_msgs::TFMessage::ConstPtr& msg);
     void bbox_callback(const ekf_landing::bboxes::ConstPtr& msg);
     void uwb_callback(const gtec_msgs::Ranging::ConstPtr& msg);
-    void mobile_robot_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
+    // void mobile_robot_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
+    void mobile_robot_callback(const nav_msgs::Odometry::ConstPtr& msg);
     void pub_Timer(const ros::TimerEvent& event);
 
     ekf_land(ros::NodeHandle& n) : nh(n){
@@ -126,7 +129,8 @@ class ekf_land{
       tf_sub = nh.subscribe<tf2_msgs::TFMessage>("/tf", 10, &ekf_land::tf_callback, this);
       yolo_sub = nh.subscribe<ekf_landing::bboxes>(bboxes_topic, 10, &ekf_land::bbox_callback, this);
       uwb_sub = nh.subscribe<gtec_msgs::Ranging>("/gtec/toa/ranging", 10, &ekf_land::uwb_callback, this);
-      mobile_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined", 10, &ekf_land::mobile_robot_callback, this);
+      // mobile_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined", 10, &ekf_land::mobile_robot_callback, this);
+      mobile_sub = nh.subscribe<nav_msgs::Odometry>("/jackal1/jackal_velocity_controller/odom", 10, &ekf_land::mobile_robot_callback, this);
 
       ///// pub
       pcl_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic, 10);
@@ -321,7 +325,7 @@ void ekf_land::uwb_callback(const gtec_msgs::Ranging::ConstPtr& msg){
   }
 }
 
-void ekf_land::mobile_robot_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg){
+void ekf_land::mobile_robot_callback(const nav_msgs::Odometry::ConstPtr& msg){
   mobile_pose=*msg;
   // mobile_pose.pose.pose.position;
   // mobile_pose.pose.pose.orientation;
@@ -361,6 +365,47 @@ void ekf_land::mobile_robot_callback(const geometry_msgs::PoseWithCovarianceStam
     }
   }
 }
+
+// void ekf_land::mobile_robot_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg){
+//   mobile_pose=*msg;
+//   // mobile_pose.pose.pose.position;
+//   // mobile_pose.pose.pose.orientation;
+
+//   if(tf_check){
+//     if (!init){
+//       P_ << 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+//             0.0, 1000.0, 0.0, 0.0, 0.0, 0.0,
+//             0.0, 0.0, 1000.0, 0.0, 0.0, 0.0,
+//             0.0, 0.0, 0.0, 1000.0, 0.0, 0.0,
+//             0.0, 0.0, 0.0, 0.0, 1000.0, 0.0,
+//             0.0, 0.0, 0.0, 0.0, 0.0, 1000.0;
+//       P = P_;
+//       Q << 0.05, 0.0, 0.0, 0.0, 0.0, 0.0,
+//            0.0, 0.05, 0.0, 0.0, 0.0, 0.0,
+//            0.0, 0.0, 0.05, 0.0, 0.0, 0.0,
+//            0.0, 0.0, 0.0, 0.05, 0.0, 0.0,
+//            0.0, 0.0, 0.0, 0.0, 0.05, 0.0,
+//            0.0, 0.0, 0.0, 0.0, 0.0, 0.05;
+//       delta_x << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
+//       X_ << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
+//       init=true;
+//     }
+//     else{
+//       VectorXf current(6);
+//       current << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
+//       if (corrected){
+//         X_ = Xhat + ( current - delta_x ); 
+//         P_ = P + Q;
+//       }
+//       else{
+//         X_ = X_ + ( current - delta_x );
+//         P_ = P_ + Q;
+//       }
+//       delta_x = current;
+//       corrected=false;
+//     }
+//   }
+// }
 
 void ekf_land::pub_Timer(const ros::TimerEvent& event){
   if (init){
