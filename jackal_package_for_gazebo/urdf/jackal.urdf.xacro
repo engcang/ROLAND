@@ -245,13 +245,25 @@
     </sensor>
   </gazebo>
 
+
 <!-- UWB plugin -->
+  <link name="uwb_link">
+    <inertial>
+      <mass value="0.001"/>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+      <inertia ixx="${dummy_inertia}" ixy="0.0" ixz="0.0" iyy="${dummy_inertia}" iyz="0.0" izz="${dummy_inertia}"/>
+    </inertial>
+  </link>
+  <joint name="uwb_joint" type="fixed">
+    <parent link="chassis_link" />
+    <child link="uwb_link" />
+  </joint>
   <gazebo>
     <plugin name='libgtec_uwb_plugin' filename='libgtec_uwb_plugin.so'>
       <update_rate>25</update_rate>
       <nlosSoftWallWidth>0.25</nlosSoftWallWidth>
       <tag_z_offset>0.3</tag_z_offset>
-      <tag_link>base_link</tag_link>
+      <tag_link>uwb_link</tag_link>
       <anchor_prefix>iris</anchor_prefix>
       <all_los>false</all_los>
       <tag_id>1</tag_id>

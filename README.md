@@ -1,12 +1,11 @@
 # TODO
-+ floor removing (for PCL average center point)
 + kalman filter
-    + VIO, UWB, center point
+    + center point
 
 <br>
 
 ## RGBD: 6m, UWB: 10m, bbox further than 6m-> Z=UWB
-
+## floor removing (for PCL average center point)
 <br>
 
 # iccas2021

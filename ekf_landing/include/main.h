@@ -54,20 +54,38 @@ class ekf_land{
     geometry_msgs::PoseWithCovarianceStamped mobile_pose;
     gtec_msgs::Ranging uwb_measured;
 
-    bool depth_check=false, tf_check=false, box_check=false, body_t_cam_check=false;
-    bool mobile_check=false, uwb_check=false;
+    bool depth_check=false, tf_check=false, body_t_cam_check=false;
     std::string depth_topic, bboxes_topic, pcl_topic, pcl_base, body_base, agg_pcl_base; 
 
     double f_x=0.0, f_y=0.0, c_x=0.0, c_y=0.0, depth_max_range=0.0, hfov=0.0;
     double curr_roll=0.0, curr_pitch=0.0, curr_yaw=0.0;
     double scale_factor=1.0;
 
-    ///// octomap
+    ///// tf
     Matrix4f map_t_cam = Matrix4f::Identity();
     Matrix4f map_t_body = Matrix4f::Identity();
     Matrix4f body_t_cam = Matrix4f::Identity();
 
-    ///// ros and tf
+    ///// Kalman
+    bool init=false, corrected=false;
+    MatrixXf P_ = MatrixXf::Zero(6,6);
+    MatrixXf P = MatrixXf::Zero(6,6);
+    MatrixXf Q = MatrixXf::Zero(6,6);
+    MatrixXf X_ = MatrixXf::Zero(6, 1);
+    MatrixXf Xhat = MatrixXf::Zero(6, 1);
+    MatrixXf delta_x = MatrixXf::Zero(6, 1);
+
+    MatrixXf Hu = MatrixXf::Zero(1, 6);
+    MatrixXf Ru = MatrixXf::Zero(1, 1);
+    MatrixXf Zu = MatrixXf::Zero(1, 1);
+    MatrixXf Ku = MatrixXf::Zero(6, 1);
+
+    MatrixXf Hc = MatrixXf::Zero(3, 6);
+    MatrixXf Rc = MatrixXf::Zero(3, 3);
+    MatrixXf Zc = MatrixXf::Zero(3, 1);
+    MatrixXf Kc = MatrixXf::Zero(6, 3);
+
+    ///// ros
     ros::NodeHandle nh;
     ros::Subscriber depth_sub;
     ros::Subscriber tf_sub;
@@ -76,6 +94,8 @@ class ekf_land{
     ros::Subscriber mobile_sub;
     ros::Publisher pcl_pub;
     ros::Publisher center_pub;
+    ros::Publisher estimated_pub;
+    ros::Timer estimated_timer;
 
     // void odom_callback(const nav_msgs::Odometry::ConstPtr& msg);
     void depth_callback(const sensor_msgs::Image::ConstPtr& msg);
@@ -83,7 +103,7 @@ class ekf_land{
     void bbox_callback(const ekf_landing::bboxes::ConstPtr& msg);
     void uwb_callback(const gtec_msgs::Ranging::ConstPtr& msg);
     void mobile_robot_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
-
+    void pub_Timer(const ros::TimerEvent& event);
 
     ekf_land(ros::NodeHandle& n) : nh(n){
       ///// params
@@ -111,6 +131,10 @@ class ekf_land{
       ///// pub
       pcl_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic, 10);
       center_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic+"/center", 10);
+      estimated_pub = nh.advertise<sensor_msgs::PointCloud2>("/estimated_pose", 10);
+
+      ///// timer
+      estimated_timer = nh.createTimer(ros::Duration(1/20.0), &ekf_land::pub_Timer, this); // every 1/30 second.
 
       ROS_WARN("Class generated, started node...");
     }
@@ -200,7 +224,6 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
         }
       }
     }
-    box_check=true;
     pcl_pub.publish(cloud2msg(depth_cvt_pcl, pcl_base));
 
     pcl::PointCloud<pcl::PointXYZ> depth_cvt_pcl_center;
@@ -279,17 +302,84 @@ void ekf_land::tf_callback(const tf2_msgs::TFMessage::ConstPtr& msg){
 }
 
 void ekf_land::uwb_callback(const gtec_msgs::Ranging::ConstPtr& msg){
-  if (msg->anchorId==1 && msg->tagId==0){
-    uwb_measured=*msg;
-    // uwb_measured.rss;
-    uwb_check=true;
+  if(init){
+    // if (msg->anchorId==1 && msg->tagId==0){
+    if (1){
+      uwb_measured=*msg;
+      Zu << uwb_measured.range/1000.0;
+      Ru << uwb_measured.errorEstimation*1000.0;
+        double rt = sqrt(pow(X_(3) - X_(0), 2) + pow(X_(4) - X_(1), 2) + pow(X_(5) - X_(2), 2));
+      Hu << (X_(0)-X_(3))/rt, (X_(1)-X_(4))/rt, (X_(2)-X_(5))/rt, (X_(3)-X_(0))/rt, (X_(4)-X_(1))/rt, (X_(5)-X_(2))/rt;
+      // Hu << X_(0)-X_(3), X_(1)-X_(4), X_(2)-X_(5), X_(3)-X_(0), X_(4)-X_(1), X_(5)-X_(2);
+      // Hu = Hu.array() / rt;
+      Ku = P_ * Hu.transpose() * (Hu * P_ * Hu.transpose() + Ru).inverse();
+      Xhat = X_ + Ku * (Zu - Hu * X_);
+      P = P_ - (Ku * Hu * P_);
+
+      corrected = true;
+    }
   }
 }
+
 void ekf_land::mobile_robot_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg){
   mobile_pose=*msg;
   // mobile_pose.pose.pose.position;
   // mobile_pose.pose.pose.orientation;
-  mobile_check=true;
+
+  if(tf_check){
+    if (!init){
+      P_ << 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 1000.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 1000.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 1000.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 1000.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 1000.0;
+      P = P_;
+      Q << 0.05, 0.0, 0.0, 0.0, 0.0, 0.0,
+           0.0, 0.05, 0.0, 0.0, 0.0, 0.0,
+           0.0, 0.0, 0.05, 0.0, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.05, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.05, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.0, 0.05;
+      delta_x << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
+      X_ << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
+      init=true;
+    }
+    else{
+      VectorXf current(6);
+      current << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
+      if (corrected){
+        X_ = Xhat + ( current - delta_x ); 
+        P_ = P + Q;
+      }
+      else{
+        X_ = X_ + ( current - delta_x );
+        P_ = P_ + Q;
+      }
+      delta_x = current;
+      corrected=false;
+    }
+  }
 }
 
+void ekf_land::pub_Timer(const ros::TimerEvent& event){
+  if (init){
+    pcl::PointCloud<pcl::PointXYZ> estimated_pcl;
+    pcl::PointXYZ p3d_estimated, p3d_estimated2;
+    if (corrected){
+      p3d_estimated.x = Xhat(0);  p3d_estimated.y = Xhat(1);  p3d_estimated.z = Xhat(2);
+      estimated_pcl.push_back(p3d_estimated);
+      p3d_estimated2.x = Xhat(3);  p3d_estimated2.y = Xhat(4);  p3d_estimated2.z = Xhat(5);
+      estimated_pcl.push_back(p3d_estimated2);
+      estimated_pub.publish(cloud2msg(estimated_pcl, agg_pcl_base));
+    }
+    else{
+      p3d_estimated.x = X_(0);  p3d_estimated.y = X_(1);  p3d_estimated.z = X_(2);
+      estimated_pcl.push_back(p3d_estimated);
+      p3d_estimated2.x = X_(3);  p3d_estimated2.y = X_(4);  p3d_estimated2.z = X_(5);
+      estimated_pcl.push_back(p3d_estimated2);
+      estimated_pub.publish(cloud2msg(estimated_pcl, agg_pcl_base));
+    }
+  }
+}
 #endif

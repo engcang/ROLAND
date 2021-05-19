@@ -42,7 +42,8 @@ void toc(string text){
 
 
 //////////// transforms
-sensor_msgs::PointCloud2 cloud2msg(pcl::PointCloud<pcl::PointXYZ> cloud, std::string frame_id = "camera_link")
+template <typename T>
+sensor_msgs::PointCloud2 cloud2msg(pcl::PointCloud<T> cloud, std::string frame_id = "camera_link")
 {
   sensor_msgs::PointCloud2 cloud_ROS;
   pcl::toROSMsg(cloud, cloud_ROS);
@@ -50,9 +51,10 @@ sensor_msgs::PointCloud2 cloud2msg(pcl::PointCloud<pcl::PointXYZ> cloud, std::st
   return cloud_ROS;
 }
 
-pcl::PointCloud<pcl::PointXYZ> cloudmsg2cloud(sensor_msgs::PointCloud2 cloudmsg)
+template <typename T>
+pcl::PointCloud<T> cloudmsg2cloud(sensor_msgs::PointCloud2 cloudmsg)
 {
-  pcl::PointCloud<pcl::PointXYZ> cloudresult;
+  pcl::PointCloud<T> cloudresult;
   pcl::fromROSMsg(cloudmsg,cloudresult);
   return cloudresult;
 }
