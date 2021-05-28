@@ -36,6 +36,8 @@
   <param name="/weight_file" value="$(find ekf_landing)/scripts/yolov4-tiny-3l-obj_final.weights"/>
   <param name="/cfg_file" value="$(find ekf_landing)/scripts/yolov4-tiny-3l-obj.cfg"/>
 
+  <param name="/yolo_kalman" value="true"/>
+  <param name="/uwb_kalman" value="true"/>
   <node name="yolo_ros_detector" pkg="ekf_landing" type="ros_opencv_dnn.py" output="screen"/>
 
 </launch>
