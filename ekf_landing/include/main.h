@@ -80,12 +80,12 @@ class ekf_land{
     MatrixXf Xhat = MatrixXf::Zero(6, 1);
     MatrixXf delta_x = MatrixXf::Zero(6, 1);
 
-    MatrixXf Hu = MatrixXf::Zero(1, 6);
+    MatrixXf Hu = MatrixXf::Zero(1, 6); //uwb
     MatrixXf Ru = MatrixXf::Zero(1, 1);
     MatrixXf Zu = MatrixXf::Zero(1, 1);
     MatrixXf Ku = MatrixXf::Zero(6, 1);
 
-    MatrixXf Hc = MatrixXf::Zero(3, 6);
+    MatrixXf Hc = MatrixXf::Zero(3, 6); //camera
     MatrixXf Rc = MatrixXf::Zero(3, 3);
     MatrixXf Zc = MatrixXf::Zero(3, 1);
     MatrixXf Kc = MatrixXf::Zero(6, 3);
@@ -216,14 +216,17 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
       // x_ = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
       
       
-      int count=0;
+      int count=0; float temp_depth=0.0;
       pcl::PointXYZ p3d_center;
       p3d_center.x = 0; p3d_center.y = 0; p3d_center.z = 0;
       for (int j=boxes.bboxes[l].x; j < boxes.bboxes[l].x + boxes.bboxes[l].width; ++j){
         for (int i=boxes.bboxes[l].y; i < boxes.bboxes[l].y + boxes.bboxes[l].height; ++i){
-          float temp_depth = depth_img.at<float>(i,j); //float!!! double makes error here!!! because encoding is "32FC", float
-          if (std::isnan(temp_depth)){
-            continue;}
+          if(scale_factor==1.0)
+            temp_depth = depth_img.at<float>(i,j); //float!!! double makes error here!!! because encoding is "32FC", float
+          else if(scale_factor==1000.0)
+            temp_depth = depth_img.at<ushort>(i,j);
+          if (std::isnan(temp_depth))
+            continue;
           else if (temp_depth/scale_factor >= 0.2 and temp_depth/scale_factor <=depth_max_range){ // scale factor = 1 for 32FC, 1000 for 16UC
             p3d.z = (temp_depth/scale_factor); 
             p3d.x = ( j - c_x ) * p3d.z / f_x;
@@ -242,29 +245,29 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
           }
         }
       }
-      p3d_center.x /= count; p3d_center.y /= count; p3d_center.z /= count;
-      depth_cvt_pcl_center.push_back(p3d_center);
+      if (count > 0){
+        p3d_center.x /= count; p3d_center.y /= count; p3d_center.z /= count;
+        depth_cvt_pcl_center.push_back(p3d_center);
+      }
     }
     pcl_pub.publish(cloud2msg(depth_cvt_pcl, pcl_base));
-    center_pub.publish(cloud2msg(depth_cvt_pcl_center, pcl_base));
 
+    if (!depth_cvt_pcl_center.empty()){
+      center_pub.publish(cloud2msg(depth_cvt_pcl_center, pcl_base));
+      if (yolo_kalman){
+        MatrixXf temp(4,1); MatrixXf temp2(4,1);
+        temp << depth_cvt_pcl_center[max_score_idx].x, depth_cvt_pcl_center[max_score_idx].y, depth_cvt_pcl_center[max_score_idx].z, 1.0;
+        double cov = 1.0;
+        temp2 << map_t_body_rot * body_t_cam * temp;
 
-    if (!depth_cvt_pcl_center.empty() && yolo_kalman){
-      // pcl::PointCloud<pcl::PointXYZ>::const_iterator it = depth_cvt_pcl_center.begin()+max_score_idx;
-      MatrixXf temp(4,1); MatrixXf temp2(4,1);
-      temp << depth_cvt_pcl_center[max_score_idx].x, depth_cvt_pcl_center[max_score_idx].y, depth_cvt_pcl_center[max_score_idx].z, 1.0;
-      // temp << it->x, it->y, it->z;
-      double cov = 1.0;
-      // temp2 << body_t_cam.inverse() * temp;
-      temp2 << map_t_body_rot * body_t_cam * temp;
+        Zc << temp2(0), temp2(1), temp2(2);
+        Rc = MatrixXf::Identity(3,3) * cov / boxes.bboxes[max_score_idx].score;
+        Kc = P_ * Hc.transpose() * (Hc * P_ * Hc.transpose() + Rc).inverse();
+        Xhat = X_ + Kc * (Zc - Hc * X_);
+        P = P_ - (Kc * Hc * P_);
 
-      Zc << temp2(0), temp2(1), temp2(2);
-      Rc = MatrixXf::Identity(3,3) * cov / boxes.bboxes[max_score_idx].score;
-      Kc = P_ * Hc.transpose() * (Hc * P_ * Hc.transpose() + Rc).inverse();
-      Xhat = X_ + Kc * (Zc - Hc * X_);
-      P = P_ - (Kc * Hc * P_);
-
-      corrected = true;
+        corrected = true;
+      }
     }
   }
 }

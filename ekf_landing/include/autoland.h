@@ -135,11 +135,12 @@ void drone::run(){
   }
   else
   {
-    vel_setpoint.twist.linear.x = saturate(0.4*horizontal_err(0),1);
-    vel_setpoint.twist.linear.y = saturate(0.4*horizontal_err(1),1);
-    vel_setpoint.twist.linear.z = saturate(0.3*(vertical_err+2),0.3);
+    vel_setpoint.twist.linear.x = saturate(0.5*horizontal_err(0),1.5);
+    vel_setpoint.twist.linear.y = saturate(0.5*horizontal_err(1),1.5);
+    vel_setpoint.twist.linear.z = saturate(0.4*(vertical_err+2),0.5);
     if (horizontal_err.norm() > 0.4){
       vel_setpoint.twist.angular.z = 0.8*saturate(heading_cur.cross(horizontal_err.normalized())(2),0.5);  
+      // vel_setpoint.twist.angular.z = 0.8*saturate(heading_cur.cross(horizontal_err.normalized())(2),0.5);  
     }
   }
 
