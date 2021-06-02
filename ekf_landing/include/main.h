@@ -24,6 +24,7 @@
 #include <ekf_landing/bboxes.h>
 #include <gtec_msgs/Ranging.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 
 #include <pcl/point_types.h>
@@ -67,6 +68,7 @@ class ekf_land{
     ///// tf
     Matrix4f map_t_cam = Matrix4f::Identity();
     Matrix4f map_t_body = Matrix4f::Identity();
+    Matrix4f map_t_body_rot = Matrix4f::Identity();
     Matrix4f body_t_cam = Matrix4f::Identity();
 
     ///// Kalman
@@ -98,6 +100,7 @@ class ekf_land{
     ros::Publisher pcl_pub;
     ros::Publisher center_pub;
     ros::Publisher estimated_pub;
+    ros::Publisher estimated_pose_diff_pub;
     ros::Timer estimated_timer;
 
     // void odom_callback(const nav_msgs::Odometry::ConstPtr& msg);
@@ -140,6 +143,7 @@ class ekf_land{
       pcl_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic, 10);
       center_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic+"/center", 10);
       estimated_pub = nh.advertise<sensor_msgs::PointCloud2>("/estimated_pose", 10);
+      estimated_pose_diff_pub = nh.advertise<geometry_msgs::PoseStamped>("/estimated_pose_diff", 10);
 
       ///// timer
       estimated_timer = nh.createTimer(ros::Duration(1/20.0), &ekf_land::pub_Timer, this); // every 1/30 second.
@@ -252,7 +256,7 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
       // temp << it->x, it->y, it->z;
       double cov = 1.0;
       // temp2 << body_t_cam.inverse() * temp;
-      temp2 << body_t_cam * temp;
+      temp2 << map_t_body_rot * body_t_cam * temp;
 
       Zc << temp2(0), temp2(1), temp2(2);
       Rc = MatrixXf::Identity(3,3) * cov / boxes.bboxes[max_score_idx].score;
@@ -305,6 +309,20 @@ void ekf_land::tf_callback(const tf2_msgs::TFMessage::ConstPtr& msg){
       map_t_body(1,3) = msg->transforms[l].transform.translation.y;
       map_t_body(2,3) = msg->transforms[l].transform.translation.z;
       map_t_body(3,3) = 1.0;
+
+      map_t_body_rot(0,0) = m[0][0];
+      map_t_body_rot(0,1) = m[0][1];
+      map_t_body_rot(0,2) = m[0][2];
+      map_t_body_rot(1,0) = m[1][0];
+      map_t_body_rot(1,1) = m[1][1];
+      map_t_body_rot(1,2) = m[1][2];
+      map_t_body_rot(2,0) = m[2][0];
+      map_t_body_rot(2,1) = m[2][1];
+      map_t_body_rot(2,2) = m[2][2];
+      map_t_body_rot(0,3) = 0;
+      map_t_body_rot(1,3) = 0;
+      map_t_body_rot(2,3) = 0;
+      map_t_body_rot(3,3) = 1.0;
 
       m.getRPY(curr_roll, curr_pitch, curr_yaw);
     }
@@ -437,12 +455,19 @@ void ekf_land::pub_Timer(const ros::TimerEvent& event){
   if (init){
     pcl::PointCloud<pcl::PointXYZ> estimated_pcl;
     pcl::PointXYZ p3d_estimated, p3d_estimated2;
+    geometry_msgs::PoseStamped estimated_pose_diff;
     if (corrected){
       p3d_estimated.x = Xhat(0);  p3d_estimated.y = Xhat(1);  p3d_estimated.z = Xhat(2);
       estimated_pcl.push_back(p3d_estimated);
       p3d_estimated2.x = Xhat(3);  p3d_estimated2.y = Xhat(4);  p3d_estimated2.z = Xhat(5);
       estimated_pcl.push_back(p3d_estimated2);
       estimated_pub.publish(cloud2msg(estimated_pcl, agg_pcl_base));
+      estimated_pose_diff.pose.position.x = Xhat(3) - Xhat(0);
+      estimated_pose_diff.pose.position.y = Xhat(4) - Xhat(1);
+      estimated_pose_diff.pose.position.z = Xhat(5) - Xhat(2);
+      estimated_pose_diff.header.frame_id = agg_pcl_base;
+      estimated_pose_diff.header.stamp = ros::Time::now();
+      estimated_pose_diff_pub.publish(estimated_pose_diff);
     }
     else{
       p3d_estimated.x = X_(0);  p3d_estimated.y = X_(1);  p3d_estimated.z = X_(2);
@@ -450,6 +475,12 @@ void ekf_land::pub_Timer(const ros::TimerEvent& event){
       p3d_estimated2.x = X_(3);  p3d_estimated2.y = X_(4);  p3d_estimated2.z = X_(5);
       estimated_pcl.push_back(p3d_estimated2);
       estimated_pub.publish(cloud2msg(estimated_pcl, agg_pcl_base));
+      estimated_pose_diff.pose.position.x = X_(3) - X_(0);
+      estimated_pose_diff.pose.position.y = X_(4) - X_(1);
+      estimated_pose_diff.pose.position.z = X_(5) - X_(2);
+      estimated_pose_diff.header.frame_id = agg_pcl_base;
+      estimated_pose_diff.header.stamp = ros::Time::now();
+      estimated_pose_diff_pub.publish(estimated_pose_diff);
     }
     ROS_WARN("%.1f %.1f %.1f %.1f %.1f %.1f", X_(0), X_(1), X_(2), X_(3), X_(4), X_(5));
   }

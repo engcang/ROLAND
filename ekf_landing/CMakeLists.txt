@@ -39,8 +39,8 @@ include_directories(
 catkin_package()
 
 add_executable(ekf_landing_node src/main.cpp)
-#add_executable(autolanding_node src/autoland.cpp)
+add_executable(autolanding_node src/autoland.cpp)
 add_executable(offb_node src/offb_node.cpp)
 target_link_libraries(ekf_landing_node ${catkin_LIBRARIES} ${EIGEN3_LIBS} ${OpenCV_LIBS})
-#target_link_libraries(autolanding_node ${catkin_LIBRARIES} ${EIGEN3_LIBS} ${OpenCV_LIBS})
+target_link_libraries(autolanding_node ${catkin_LIBRARIES} ${EIGEN3_LIBS} ${OpenCV_LIBS})
 target_link_libraries(offb_node ${catkin_LIBRARIES} ${EIGEN3_LIBS} ${OpenCV_LIBS})
