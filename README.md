@@ -1,15 +1,12 @@
-## RGBD: 6m, UWB: 10m, bbox further than 6m-> Z=UWB
-## floor removing (for PCL average center point)
-<br>
-
-# iccas2021
 ## Robust Landing of UAV on Moving Platform using Object Detection and UWB based Extended Kalman Filter
+### ICCAS2021
 
 <br>
 
 ### Requirements
 
 <details><summary>[click to see]</summary>
+
 + (Optional) `Joystick`, I used `sony dualshock4`
 + `OpenCV` upper than 4.4.0 for OpenCV-DNN-YOLO, and also `cv_bridge`
     + `OpenCV`, `cv_bridge` manual build refer [here](https://github.com/engcang/ros-yolo-sort/tree/master/YOLO_and_ROS_ver#2-prerequisites)

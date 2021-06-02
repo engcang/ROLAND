@@ -4,6 +4,3 @@
 [submodule "tf_to_trajectory"]
 	path = tf_to_trajectory
 	url = https://github.com/engcang/tf_to_trajectory
-[submodule "VINS-Fusion"]
-	path = VINS-Fusion
-	url = https://github.com/HKUST-Aerial-Robotics/VINS-Fusion
