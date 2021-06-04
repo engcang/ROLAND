@@ -39,6 +39,7 @@ class drone{
   public:
     mavros_msgs::State current_state;
     nav_msgs::Odometry drone_odom;
+    nav_msgs::Odometry mobile_odom;
     geometry_msgs::PoseStamped pose_diff;
     Vector3f drone_pose = MatrixXf::Zero(3,1);
     Vector3f drone_heading = MatrixXf::Zero(3,1);
@@ -50,6 +51,7 @@ class drone{
     ros::NodeHandle nh;
     ros::Subscriber state_sub;
     ros::Subscriber odom_sub;
+    ros::Subscriber mobile_odom_sub;
     ros::Subscriber pose_diff_sub;
     ros::Publisher local_vel_pub;
     ros::Publisher land_pose_pub;
@@ -57,6 +59,7 @@ class drone{
 
     void state_callback(const mavros_msgs::State::ConstPtr& msg);
     void odom_callback(const nav_msgs::Odometry::ConstPtr& msg);
+    void mobile_odom_callback(const nav_msgs::Odometry::ConstPtr& msg);
     void pose_diff_callback(const geometry_msgs::PoseStamped::ConstPtr& msg);
     void run();
 
@@ -66,6 +69,7 @@ class drone{
       ///// sub 
       state_sub = nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &drone::state_callback, this);
       odom_sub = nh.subscribe<nav_msgs::Odometry>("/mavros/local_position/odom", 10, &drone::odom_callback, this);
+      mobile_odom_sub = nh.subscribe<nav_msgs::Odometry>("/jackal1/jackal_velocity_controller/odom", 10, &drone::mobile_odom_callback, this);
       pose_diff_sub = nh.subscribe<geometry_msgs::PoseStamped>("/estimated_pose_diff", 10, &drone::pose_diff_callback, this);      
       ///// pub
       local_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 10);
@@ -92,6 +96,17 @@ void drone::odom_callback(const nav_msgs::Odometry::ConstPtr& msg){
   q.z() = drone_odom.pose.pose.orientation.z;
   q.w() = drone_odom.pose.pose.orientation.w;
   drone_heading = q.toRotationMatrix()*temp;
+}
+void drone::mobile_odom_callback(const nav_msgs::Odometry::ConstPtr& msg){
+  mobile_odom=*msg;
+  Quaternionf q;
+  Vector3f temp;
+  temp << mobile_odom.twist.twist.linear.x, mobile_odom.twist.twist.linear.y, mobile_odom.twist.twist.linear.z;
+  q.x() = mobile_odom.pose.pose.orientation.x;
+  q.y() = mobile_odom.pose.pose.orientation.y;
+  q.z() = mobile_odom.pose.pose.orientation.z;
+  q.w() = mobile_odom.pose.pose.orientation.w;
+  land_vel = q.toRotationMatrix()*temp;
 }
 
 void drone::pose_diff_callback(const geometry_msgs::PoseStamped::ConstPtr& msg){
@@ -123,9 +138,9 @@ void drone::run(){
   
   if (horizontal_err.norm() < 0.2)
   {
-    vel_setpoint.twist.linear.x = saturate(0.5*horizontal_err(0),1);
-    vel_setpoint.twist.linear.y = saturate(0.5*horizontal_err(1),1);
-    vel_setpoint.twist.linear.z = -0.15f;
+    vel_setpoint.twist.linear.x = saturate(0.7*horizontal_err(0) + land_vel(0),1) ;
+    vel_setpoint.twist.linear.y = saturate(0.7*horizontal_err(1) + land_vel(1),1);
+    vel_setpoint.twist.linear.z = -0.2f;
     vel_setpoint.twist.angular.z = 0;
     if (drone_odom.twist.twist.linear.z<0.05 && drone_odom.twist.twist.linear.z>-0.05 && vertical_err>-0.8)
     {
@@ -135,8 +150,8 @@ void drone::run(){
   }
   else
   {
-    vel_setpoint.twist.linear.x = saturate(0.5*horizontal_err(0),1.5);
-    vel_setpoint.twist.linear.y = saturate(0.5*horizontal_err(1),1.5);
+    vel_setpoint.twist.linear.x = saturate(0.5*horizontal_err(0) + land_vel(0),1.5);
+    vel_setpoint.twist.linear.y = saturate(0.5*horizontal_err(1) + land_vel(1),1.5);
     vel_setpoint.twist.linear.z = saturate(0.4*(vertical_err+2),0.5);
     if (horizontal_err.norm() > 0.4){
       vel_setpoint.twist.angular.z = 0.8*saturate(heading_cur.cross(horizontal_err.normalized())(2),0.5);  
