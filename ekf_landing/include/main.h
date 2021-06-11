@@ -313,15 +313,7 @@ void ekf_land::tf_callback(const tf2_msgs::TFMessage::ConstPtr& msg){
       map_t_body(2,3) = msg->transforms[l].transform.translation.z;
       map_t_body(3,3) = 1.0;
 
-      map_t_body_rot(0,0) = m[0][0];
-      map_t_body_rot(0,1) = m[0][1];
-      map_t_body_rot(0,2) = m[0][2];
-      map_t_body_rot(1,0) = m[1][0];
-      map_t_body_rot(1,1) = m[1][1];
-      map_t_body_rot(1,2) = m[1][2];
-      map_t_body_rot(2,0) = m[2][0];
-      map_t_body_rot(2,1) = m[2][1];
-      map_t_body_rot(2,2) = m[2][2];
+      map_t_body_rot = map_t_body;
       map_t_body_rot(0,3) = 0;
       map_t_body_rot(1,3) = 0;
       map_t_body_rot(2,3) = 0;
@@ -358,15 +350,17 @@ void ekf_land::uwb_callback(const gtec_msgs::Ranging::ConstPtr& msg){
   if(init){
     if (uwb_kalman && msg->anchorId==1 && msg->tagId==0){
       uwb_measured=*msg;
-      Zu << uwb_measured.range/1000.0;
-      Ru << (-uwb_measured.rss)*uwb_measured.errorEstimation*100.0;
-        double rt = sqrt(pow(X_(3) - X_(0), 2) + pow(X_(4) - X_(1), 2) + pow(X_(5) - X_(2), 2));
-      Hu << (X_(0)-X_(3))/rt, (X_(1)-X_(4))/rt, (X_(2)-X_(5))/rt, (X_(3)-X_(0))/rt, (X_(4)-X_(1))/rt, (X_(5)-X_(2))/rt;
-      Ku = P_ * Hu.transpose() * (Hu * P_ * Hu.transpose() + Ru).inverse();
-      Xhat = X_ + Ku * (Zu - Hu * X_);
-      P = P_ - (Ku * Hu * P_);
+      if (uwb_measured.range/1000.0 > 0.8 && uwb_measured.range/1000.0 < 10.0){
+        Zu << uwb_measured.range/1000.0;
+        Ru << (-uwb_measured.rss)*uwb_measured.errorEstimation*100.0;
+          double rt = sqrt(pow(X_(3) - X_(0), 2) + pow(X_(4) - X_(1), 2) + pow(X_(5) - X_(2), 2));
+        Hu << (X_(0)-X_(3))/rt, (X_(1)-X_(4))/rt, (X_(2)-X_(5))/rt, (X_(3)-X_(0))/rt, (X_(4)-X_(1))/rt, (X_(5)-X_(2))/rt;
+        Ku = P_ * Hu.transpose() * (Hu * P_ * Hu.transpose() + Ru).inverse();
+        Xhat = X_ + Ku * (Zu - Hu * X_);
+        P = P_ - (Ku * Hu * P_);
 
-      corrected = true;
+        corrected = true;
+      }
     }
   }
 }

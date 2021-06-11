@@ -125,7 +125,7 @@ void drone::run(){
   {
     vel_setpoint.twist.linear.x = saturate(0.5*horizontal_err(0),1);
     vel_setpoint.twist.linear.y = saturate(0.5*horizontal_err(1),1);
-    vel_setpoint.twist.linear.z = -0.15f;
+    vel_setpoint.twist.linear.z = -0.25f;
     vel_setpoint.twist.angular.z = 0;
     if (drone_odom.twist.twist.linear.z<0.05 && drone_odom.twist.twist.linear.z>-0.05 && vertical_err>-0.8)
     {
@@ -148,4 +148,3 @@ void drone::run(){
   vel_setpoint.header.stamp = ros::Time::now();
   local_vel_pub.publish(vel_setpoint);
 }
-

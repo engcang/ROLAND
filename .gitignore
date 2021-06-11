@@ -1,2 +1,4 @@
+.gitignore
+.gitmodules
 ekf_landing/.vscode/
 .vscode/
