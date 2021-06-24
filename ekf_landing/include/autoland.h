@@ -47,8 +47,15 @@ class drone{
     Vector3f drone_pose = MatrixXf::Zero(3,1);
     Vector3f drone_heading = MatrixXf::Zero(3,1);
     Vector3f land_pose = MatrixXf::Zero(3,1);
-    Vector3f land_vel = MatrixXf::Zero(3,1);
     geometry_msgs::TwistStamped vel_setpoint;
+
+    ////// land vel
+    Vector3f land_pose_last = MatrixXf::Zero(3,1);
+    Vector3f land_vel = MatrixXf::Zero(3,1);
+    Vector3f land_vel_raw = MatrixXf::Zero(3,1);
+    ros::Time last_time;
+    double dt= 0.0;
+    double a = 0.3;
 
     ///// ros
     ros::NodeHandle nh;
@@ -57,7 +64,7 @@ class drone{
     ros::Subscriber mobile_odom_sub;
     ros::Subscriber mobile_odom_ekf_sub;
     ros::Subscriber pose_diff_sub;
-    ros::Subscriber mobile_vel_sub;
+    // ros::Subscriber mobile_vel_sub;
     ros::Publisher local_vel_pub;
     ros::Publisher land_pose_pub;
     ros::Timer estimated_timer;
@@ -79,13 +86,14 @@ class drone{
       mobile_odom_sub = nh.subscribe<nav_msgs::Odometry>("/jackal1/jackal_velocity_controller/odom", 10, &drone::mobile_odom_callback, this);
       mobile_odom_ekf_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined", 10, &drone::mobile_odom_ekf_callback, this);
       pose_diff_sub = nh.subscribe<geometry_msgs::PoseStamped>("/estimated_pose_diff", 10, &drone::pose_diff_callback, this);      
-      mobile_vel_sub = nh.subscribe<geometry_msgs::TwistStamped>("/estimated_mobile_vel", 10, &drone::mobile_vel_callback, this);       
+      // mobile_vel_sub = nh.subscribe<geometry_msgs::TwistStamped>("/estimated_mobile_vel", 10, &drone::mobile_vel_callback, this);       
       ///// pub
       local_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 10);
       land_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/land_pose", 10);
       ///// timer
       //estimated_timer = nh.createTimer(ros::Duration(1/20.0), &ekf_land::pub_Timer, this); // every 1/30 second.
-
+      
+      last_time = ros::Time::now();
       ROS_WARN("Class generated, started node...");
     }
 };
@@ -129,6 +137,14 @@ void drone::pose_diff_callback(const geometry_msgs::PoseStamped::ConstPtr& msg){
   pose_diff.pose.position.y + drone_pose(1),
   pose_diff.pose.position.z + drone_pose(2);
 
+  dt = double(ros::Time::now().toSec()-last_time.toSec());
+  land_vel_raw = (land_pose-land_pose_last)/dt;
+  last_time = ros::Time::now();
+  land_pose_last = land_pose;
+
+  land_vel = (1-a)*land_vel + a*land_vel_raw;
+  
+
   geometry_msgs::PoseStamped land_pose_msg;
   land_pose_msg.pose.position.x = land_pose(0);
   land_pose_msg.pose.position.y = land_pose(1);
@@ -138,12 +154,12 @@ void drone::pose_diff_callback(const geometry_msgs::PoseStamped::ConstPtr& msg){
   land_pose_pub.publish(land_pose_msg);
 }
 
-void drone::mobile_vel_callback(const geometry_msgs::TwistStamped::ConstPtr& msg){
-  mobile_vel=*msg;
-  land_vel << mobile_vel.twist.linear.x,
-              mobile_vel.twist.linear.y,
-              mobile_vel.twist.linear.z;
-}
+// void drone::mobile_vel_callback(const geometry_msgs::TwistStamped::ConstPtr& msg){
+//   mobile_vel=*msg;
+//   land_vel << mobile_vel.twist.linear.x,
+//               mobile_vel.twist.linear.y,
+//               mobile_vel.twist.linear.z;
+// }
  
 void drone::run(){
   Vector3f horizontal_err;
