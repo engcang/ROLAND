@@ -8,6 +8,7 @@
 #include <Eigen/Eigen> // whole Eigen library : Sparse(Linearalgebra) + Dense(Core+Geometry+LU+Cholesky+SVD+QR+Eigenvalues)
 #include <iostream> //cout
 #include <math.h> // pow
+#include <time.h>  // time
 #include <vector>
 #include <chrono>
 #include <algorithm> // min max
@@ -25,6 +26,7 @@
 #include <gtec_msgs/Ranging.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <nav_msgs/Odometry.h>
 
 #include <pcl/point_types.h>
@@ -65,6 +67,16 @@ class ekf_land{
     double curr_roll=0.0, curr_pitch=0.0, curr_yaw=0.0;
     double scale_factor=1.0;
 
+    ///// mobile vel
+    ros::Time last_time;
+    double dt= 0.0;
+    double a = 0.3;
+    MatrixXf mobile_pose_last = MatrixXf::Zero(3, 1);
+    MatrixXf mobile_pose_cur = MatrixXf::Zero(3, 1);
+    MatrixXf mobile_vel_raw = MatrixXf::Zero(3, 1);
+    MatrixXf mobile_vel = MatrixXf::Zero(3, 1);
+    
+
     ///// tf
     Matrix4f map_t_cam = Matrix4f::Identity();
     Matrix4f map_t_body = Matrix4f::Identity();
@@ -102,6 +114,7 @@ class ekf_land{
     ros::Publisher center_pub;
     ros::Publisher estimated_pub;
     ros::Publisher estimated_pose_diff_pub;
+    ros::Publisher estimated_mobile_vel_pub;
     ros::Timer estimated_timer;
 
     // void odom_callback(const nav_msgs::Odometry::ConstPtr& msg);
@@ -145,10 +158,13 @@ class ekf_land{
       center_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic+"/center", 10);
       estimated_pub = nh.advertise<sensor_msgs::PointCloud2>("/estimated_pose", 10);
       estimated_pose_diff_pub = nh.advertise<geometry_msgs::PoseStamped>("/estimated_pose_diff", 10);
+      estimated_mobile_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/estimated_mobile_vel", 10);
+      
 
       ///// timer
       estimated_timer = nh.createTimer(ros::Duration(1/20.0), &ekf_land::pub_Timer, this); // every 1/30 second.
 
+      last_time = ros::Time::now();
       ROS_WARN("Class generated, started node...");
     }
 };
@@ -454,6 +470,7 @@ void ekf_land::pub_Timer(const ros::TimerEvent& event){
     pcl::PointCloud<pcl::PointXYZ> estimated_pcl;
     pcl::PointXYZ p3d_estimated, p3d_estimated2;
     geometry_msgs::PoseStamped estimated_pose_diff;
+    geometry_msgs::TwistStamped estimated_mobile_vel;
     if (corrected){
       p3d_estimated.x = Xhat(0);  p3d_estimated.y = Xhat(1);  p3d_estimated.z = Xhat(2);
       estimated_pcl.push_back(p3d_estimated);
@@ -480,6 +497,20 @@ void ekf_land::pub_Timer(const ros::TimerEvent& event){
       estimated_pose_diff.header.stamp = ros::Time::now();
       estimated_pose_diff_pub.publish(estimated_pose_diff);
     }
+    estimated_mobile_vel.header.stamp = ros::Time::now();
+    dt = double(estimated_mobile_vel.header.stamp.toSec() - last_time.toSec());
+    last_time = estimated_mobile_vel.header.stamp;
+    mobile_pose_cur(0) = Xhat(3);
+    mobile_pose_cur(1) = Xhat(4);
+    mobile_pose_cur(2) = Xhat(5);
+    mobile_vel_raw = (mobile_pose_cur-mobile_pose_last)/0.05;
+    mobile_pose_last = mobile_pose_cur;
+    mobile_vel = (1-a)*mobile_vel + a*mobile_vel_raw;
+    estimated_mobile_vel.twist.linear.x = mobile_vel(0);
+    estimated_mobile_vel.twist.linear.y = mobile_vel(1);
+    estimated_mobile_vel.twist.linear.z = mobile_vel(2);
+    estimated_mobile_vel.header.frame_id = agg_pcl_base;
+    estimated_mobile_vel_pub.publish(estimated_pose_diff);
     ROS_WARN("%.1f %.1f %.1f %.1f %.1f %.1f", X_(0), X_(1), X_(2), X_(3), X_(4), X_(5));
   }
 }

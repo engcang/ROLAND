@@ -43,6 +43,7 @@ class drone{
     nav_msgs::Odometry mobile_odom;
     geometry_msgs::PoseWithCovarianceStamped mobile_odom_ekf;
     geometry_msgs::PoseStamped pose_diff;
+    geometry_msgs::TwistStamped mobile_vel;
     Vector3f drone_pose = MatrixXf::Zero(3,1);
     Vector3f drone_heading = MatrixXf::Zero(3,1);
     Vector3f land_pose = MatrixXf::Zero(3,1);
@@ -56,6 +57,7 @@ class drone{
     ros::Subscriber mobile_odom_sub;
     ros::Subscriber mobile_odom_ekf_sub;
     ros::Subscriber pose_diff_sub;
+    ros::Subscriber mobile_vel_sub;
     ros::Publisher local_vel_pub;
     ros::Publisher land_pose_pub;
     ros::Timer estimated_timer;
@@ -65,6 +67,7 @@ class drone{
     void mobile_odom_callback(const nav_msgs::Odometry::ConstPtr& msg);
     void mobile_odom_ekf_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
     void pose_diff_callback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+    void mobile_vel_callback(const geometry_msgs::TwistStamped::ConstPtr& msg);
     void run();
 
 
@@ -76,6 +79,7 @@ class drone{
       mobile_odom_sub = nh.subscribe<nav_msgs::Odometry>("/jackal1/jackal_velocity_controller/odom", 10, &drone::mobile_odom_callback, this);
       mobile_odom_ekf_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined", 10, &drone::mobile_odom_ekf_callback, this);
       pose_diff_sub = nh.subscribe<geometry_msgs::PoseStamped>("/estimated_pose_diff", 10, &drone::pose_diff_callback, this);      
+      mobile_vel_sub = nh.subscribe<geometry_msgs::TwistStamped>("/estimated_mobile_vel", 10, &drone::mobile_vel_callback, this);       
       ///// pub
       local_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 10);
       land_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/land_pose", 10);
@@ -116,7 +120,7 @@ void drone::mobile_odom_ekf_callback(const geometry_msgs::PoseWithCovarianceStam
   q.y() = mobile_odom_ekf.pose.pose.orientation.y;
   q.z() = mobile_odom_ekf.pose.pose.orientation.z;
   q.w() = mobile_odom_ekf.pose.pose.orientation.w;
-  land_vel = q.toRotationMatrix()*temp;
+  //land_vel = q.toRotationMatrix()*temp;
 }
 
 void drone::pose_diff_callback(const geometry_msgs::PoseStamped::ConstPtr& msg){
@@ -132,6 +136,13 @@ void drone::pose_diff_callback(const geometry_msgs::PoseStamped::ConstPtr& msg){
   land_pose_msg.header.frame_id = "map";
   land_pose_msg.header.stamp = ros::Time::now();
   land_pose_pub.publish(land_pose_msg);
+}
+
+void drone::mobile_vel_callback(const geometry_msgs::TwistStamped::ConstPtr& msg){
+  mobile_vel=*msg;
+  land_vel << mobile_vel.twist.linear.x,
+              mobile_vel.twist.linear.y,
+              mobile_vel.twist.linear.z;
 }
  
 void drone::run(){
@@ -173,4 +184,3 @@ void drone::run(){
   vel_setpoint.header.stamp = ros::Time::now();
   local_vel_pub.publish(vel_setpoint);
 }
-

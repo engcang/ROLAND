@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 
-  <node name="rvizualizer" pkg="rviz" type="rviz" args="-d $(find ekf_landing)/../rviz.rviz"/>
+  <!-- <node name="rvizualizer" pkg="rviz" type="rviz" args="-d $(find ekf_landing)/../rviz.rviz"/> -->
 
 
   <param name="/depth_max_range" value="6.0"/>
