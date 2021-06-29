@@ -66,15 +66,6 @@ class ekf_land{
     double f_x=0.0, f_y=0.0, c_x=0.0, c_y=0.0, depth_max_range=0.0, hfov=0.0;
     double curr_roll=0.0, curr_pitch=0.0, curr_yaw=0.0;
     double scale_factor=1.0;
-
-    ///// mobile vel
-    // ros::Time last_time;
-    // double dt= 0.0;
-    // double a = 0.3;
-    // MatrixXf mobile_pose_last = MatrixXf::Zero(3, 1);
-    // MatrixXf mobile_pose_cur = MatrixXf::Zero(3, 1);
-    // MatrixXf mobile_vel_raw = MatrixXf::Zero(3, 1);
-    // MatrixXf mobile_vel = MatrixXf::Zero(3, 1);
     
 
     ///// tf
@@ -114,7 +105,6 @@ class ekf_land{
     ros::Publisher center_pub;
     ros::Publisher estimated_pub;
     ros::Publisher estimated_pose_diff_pub;
-    // ros::Publisher estimated_mobile_vel_pub;
     ros::Timer estimated_timer;
 
     // void odom_callback(const nav_msgs::Odometry::ConstPtr& msg);
@@ -497,20 +487,6 @@ void ekf_land::pub_Timer(const ros::TimerEvent& event){
       estimated_pose_diff.header.stamp = ros::Time::now();
       estimated_pose_diff_pub.publish(estimated_pose_diff);
     }
-    // estimated_mobile_vel.header.stamp = ros::Time::now();
-    // dt = double(estimated_mobile_vel.header.stamp.toSec() - last_time.toSec()); 
-    // last_time = estimated_mobile_vel.header.stamp;
-    // mobile_pose_cur(0) = Xhat(3);
-    // mobile_pose_cur(1) = Xhat(4);
-    // mobile_pose_cur(2) = Xhat(5);
-    // mobile_vel_raw = (mobile_pose_cur-mobile_pose_last)/0.05;
-    // mobile_pose_last = mobile_pose_cur;
-    // mobile_vel = (1-a)*mobile_vel + a*mobile_vel_raw;
-    // estimated_mobile_vel.twist.linear.x = mobile_vel(0);
-    // estimated_mobile_vel.twist.linear.y = mobile_vel(1);
-    // estimated_mobile_vel.twist.linear.z = mobile_vel(2);
-    // estimated_mobile_vel.header.frame_id = agg_pcl_base;
-    // estimated_mobile_vel_pub.publish(estimated_pose_diff);
     ROS_WARN("%.1f %.1f %.1f %.1f %.1f %.1f", X_(0), X_(1), X_(2), X_(3), X_(4), X_(5));
   }
 }
