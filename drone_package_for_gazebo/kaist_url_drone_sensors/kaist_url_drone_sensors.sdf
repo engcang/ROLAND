@@ -7,7 +7,9 @@
     </include>
     <include>
       <uri>model://d435i</uri>
-      <pose>0.162 0 0.055 0 0.7854 0</pose>
+<!--      <pose>0.162 0 0.055 0 0 0</pose>-->
+<!--      <pose>0.162 0 0.055 0 0.523598776 0</pose>-->
+      <pose>0.162 0 0.055 0 0.785398163 0</pose>
     </include>
     <joint name="d435i_cam_joint" type="fixed">
       <child>d435i::camera_link</child>

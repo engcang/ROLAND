@@ -8,17 +8,13 @@
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
+#include <mavros_msgs/CommandLong.h> //kill service
 #include <signal.h>
 #include "pid_controller.h"
+#include "utility.h"
 
 /* namespace */
 using namespace Eigen;
-
-/* to exit program when ctrl+c */
-void signal_handler(sig_atomic_t s) {
-  std::cout << "You pressed Ctrl + C, exiting" << std::endl;
-  exit(1);
-}
 
 class drone{
   public:
@@ -51,7 +47,6 @@ class drone{
     float descend_vel_limit = 0.7f;
     
 
-
     /* land vel estimation */
     Vector3f land_pose_last = MatrixXf::Zero(3,1);
     Vector3f land_vel = MatrixXf::Zero(3,1);
@@ -62,17 +57,14 @@ class drone{
 
     /* ros */
     ros::NodeHandle nh;
-    /* Subscribers */
     ros::Subscriber state_sub;
     ros::Subscriber odom_sub;
     ros::Subscriber mobile_odom_sub;
     ros::Subscriber mobile_odom_ekf_sub;
     ros::Subscriber pose_diff_sub;
-    /* Publishers */
     ros::Publisher local_vel_pub;
     ros::Publisher land_pose_pub;
-    /* Timer */
-    ros::Timer estimated_timer;
+    ros::ServiceClient kill;
 
     /*--------------------
        < Class Methods > 
@@ -102,19 +94,18 @@ class drone{
       local_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 10);
       land_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/land_pose", 10);
 
-      ///// timer
-      //estimated_timer = nh.createTimer(ros::Duration(1/20.0), &ekf_land::pub_Timer, this); // every 1/30 second.
-      
+      /* service kill switch */
+      kill = nh.serviceClient<mavros_msgs::CommandLong>("/mavros/cmd/command");
 
       /* set PID parameters */
       PID_x.set_parameter(Kp_xy, Ki_xy, Kd_xy, vel_limit_xy, integ_limit_xy);
       PID_y.set_parameter(Kp_xy, Ki_xy, Kd_xy, vel_limit_xy, integ_limit_xy);
 
+      tic();
       last_time = ros::Time::now();
       ROS_WARN("Class generated, started node...");
     }
 };
-
 
 
 void drone::state_callback(const mavros_msgs::State::ConstPtr& msg){
@@ -195,7 +186,7 @@ void drone::run(){
 
   target_pose = land_pose;
   /* for better camera view, descend obliquely */
-  target_pose(0) += 0.3*heading_cur(0)*(land_pose(2)-drone_pose(2) -0.15);
+  target_pose(0) += 0.3*heading_cur(0)*(land_pose(2)-drone_pose(2) -0.15); //bigger value decreases slope
   target_pose(1) += 0.3*heading_cur(1)*(land_pose(2)-drone_pose(2)-0.15);
   
   vertical_err = target_pose(2)-drone_pose(2);
@@ -203,7 +194,9 @@ void drone::run(){
   horizontal_err(2) = 0; // remove vertical component
   
   /* if horizontal err is small enough -> decend & land */
-  if (horizontal_err.norm() < err_bound)
+  auto stop = high_resolution_clock::now();
+  auto duration = duration_cast<microseconds>(stop - start);
+  if (horizontal_err.norm() < err_bound and duration.count()/1000000.0 > 50.0)
   {
     /* follow target */
     vel_setpoint.twist.linear.x = PID_x.control(target_pose(0), drone_pose(0), land_vel(0));
@@ -216,7 +209,12 @@ void drone::run(){
     /* if landing detected -> exit program */
     if (drone_odom.twist.twist.linear.z<0.03 && drone_odom.twist.twist.linear.z>-0.03 && vertical_err>-0.4)
     {
-      exit(0);
+      // kill to stop drone
+      mavros_msgs::CommandLong service;
+      service.request.command = 400;
+      service.request.param2 = 21196.0;
+      if(kill.call(service) && service.response.success)
+        exit(0);
     }
     
   }

@@ -71,7 +71,7 @@ class cv_yolo_ros():
 
 
 if __name__=='__main__':
-    COLORS = [(0, 255, 255), (255, 255, 0), (0, 255, 0), (255, 0, 0)]
+    COLORS = [(0, 255, 0), (255, 255, 0), (0, 255, 0), (255, 0, 0)]
     avg_FPS=0; count=0; total_fps=0;
     cyr=cv_yolo_ros()
     while 1:
@@ -99,7 +99,7 @@ if __name__=='__main__':
                     out_boxes.bboxes.append(out_box)
                     color = COLORS[int(classid) % len(COLORS)]
                     label = "%s : %f" % (cyr.class_names[classid[0]], score)
-                    cv2.rectangle(frame, box, color, 2)
+                    cv2.rectangle(frame, box, color, 5)
                     cv2.putText(frame, label, (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                 end_drawing = time.time()
 

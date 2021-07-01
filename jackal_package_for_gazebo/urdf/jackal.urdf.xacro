@@ -235,7 +235,7 @@
         <topicName>imu</topicName>
         <bodyName>imu_link</bodyName>
         <updateRateHZ>100.0</updateRateHZ>
-        <gaussianNoise>0.000001</gaussianNoise>
+        <gaussianNoise>0.01</gaussianNoise>
         <xyzOffset>0 0 0</xyzOffset>
         <rpyOffset>0 0 0</rpyOffset>
         <frameName>imu_link</frameName>
@@ -260,9 +260,9 @@
   </joint>
   <gazebo>
     <plugin name='libgtec_uwb_plugin' filename='libgtec_uwb_plugin.so'>
-      <update_rate>25</update_rate>
+      <update_rate>50</update_rate>
       <nlosSoftWallWidth>0.25</nlosSoftWallWidth>
-      <tag_z_offset>0.3</tag_z_offset>
+      <tag_z_offset>0.2</tag_z_offset>
       <tag_link>uwb_link</tag_link>
       <anchor_prefix>iris</anchor_prefix>
       <all_los>false</all_los>

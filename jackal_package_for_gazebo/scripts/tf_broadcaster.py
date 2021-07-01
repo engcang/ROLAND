@@ -16,7 +16,7 @@ signal.signal(signal.SIGINT, signal_handler)
 class caster():
     def __init__(self):
         rospy.init_node('tf_broadcaster', anonymous=True)
-        self.parent_frame_id = rospy.get_param("/parent_frame_id", 'world')
+        self.parent_frame_id = rospy.get_param("~parent_frame_id", 'world')
         self.robot_name = rospy.get_namespace()
 
         self.gt_poses = rospy.Subscriber("/gazebo/model_states", ModelStates, self.gtcallback)

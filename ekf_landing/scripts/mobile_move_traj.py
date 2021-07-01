@@ -45,8 +45,8 @@ def vel_saturation(vel, max_val):
 class robot():
     def __init__(self):
         rospy.init_node('robot_controller', anonymous=True)
-        # self.traj = rospy.get_param("/traj", "square")
-        self.traj = rospy.get_param("/traj", "circle")
+        self.traj = rospy.get_param("/traj", "square")
+        #self.traj = rospy.get_param("/traj", "circle")
         self.robot_vel_topic = rospy.get_param("/mobile_robot_vel_topic", "/jackal1/jackal_velocity_controller/cmd_vel")
         self.mobile_robot_vel_pub = rospy.Publisher(self.robot_vel_topic, Twist, queue_size=10)
         self.gt_poses = rospy.Subscriber("/gazebo/model_states", ModelStates, self.gtcallback)
@@ -69,7 +69,7 @@ waypoints=[[10, 0], [10, 10], [0, 10], [0, 0]]
 idx=0
 tolerance=1.2
 k1=2; k2=2;
-v_max = 1.0
+v_max = 0.8
 w_max = 1.0
 radius = 3.0
 

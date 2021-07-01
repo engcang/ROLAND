@@ -30,6 +30,7 @@ class caster():
 (msg.pose.orientation.x,msg.pose.orientation.y,msg.pose.orientation.z,msg.pose.orientation.w),\
 self.header,"base_link","map")
 #        self.br.sendTransform((0.162, 0.0, 0.055), (0.5,-0.5,0.5,-0.5), self.header, self.camera_link_name,"base_link")
+#        self.br.sendTransform((0.162, 0.0, 0.055), (-0.6123724, 0.6123724, -0.3535534, 0.3535534), self.header, self.camera_link_name,"base_link") # downward 30 degree
         self.br.sendTransform((0.162, 0.0, 0.055), (-0.6532815, 0.6532815, -0.270598, 0.270598), self.header, self.camera_link_name,"base_link") # downward 45 degree
         return
 

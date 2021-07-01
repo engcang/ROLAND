@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
 <launch>
 
-  <node name="rvizualizer" pkg="rviz" type="rviz" args="-d $(find ekf_landing)/../rviz.rviz"/>
+  <node name="rviz_mobile" pkg="rviz" type="rviz" args="-d $(find ekf_landing)/../rviz_mobile.rviz"/>
+  <node name="rviz_drone" pkg="rviz" type="rviz" args="-d $(find ekf_landing)/../rviz_drone.rviz"/>
+  <node name="visualizer_for_rviz" pkg="ekf_landing" type="visualizer.py" output="screen"/>
 
 
   <param name="/depth_max_range" value="6.0"/>
@@ -25,7 +27,7 @@
   <!-- <param name="/backend" value="cv2.dnn.DNN_BACKEND_CUDA"/> -->
   <!-- <param name="/target" value="cv2.dnn.DNN_TARGET_CUDA"/> -->
 
-  <param name="/inference_rate" value="30"/>
+  <param name="/inference_rate" value="10"/>
   <param name="/img_in_topic" value="/d435i/stereo_ir/left/image_raw"/>
   <param name="/img_out" value="True"/>
   <param name="/img_out_topic" value="/detected"/>

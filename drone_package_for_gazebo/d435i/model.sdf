@@ -116,7 +116,7 @@
         </camera>
         <always_on>1</always_on>
         <visualize>1</visualize>
-        <update_rate>30.0</update_rate>
+        <update_rate>15.0</update_rate>
         <plugin name="stereo_camera_controller" filename="libgazebo_ros_multicamera.so">
           <alwaysOn>true</alwaysOn>
           <updateRate>0.0</updateRate>

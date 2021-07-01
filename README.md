@@ -35,7 +35,7 @@ $ git submodule update --init --recursive
 
 + [Important] Set gazebo model path
 ~~~shell
-$ echo "export GAZEBO_MODEL_PATH=:/home/<your_pcname>/<your_workspace>/src/iccas2021/gazebo_model_and_world:$GAZEBO_MODEL_PATH" >> ~/.bashrc
+$ echo "export GAZEBO_MODEL_PATH=:/home/<your_pcname>/<your_workspace>/src/iccas2021/gazebo_maps/bounding_wall_world:/home/<your_pcname>/<your_workspace>/src/iccas2021/drone_package_for_gazebo:$GAZEBO_MODEL_PATH" >> ~/.bashrc
 $ echo "export LD_LIBRARY_PATH=:/home/<your_pcname>/<your_workspace>/devel/lib:$LD_LIBRARY_PATH" >> ~/.bashrc
 $ . ~/.bashrc
 ~~~
@@ -62,6 +62,7 @@ $ source ~/.bashrc
 + UWB Gazebo sensor plugin and message from [uwb gazebo plugin](https://github.com/valentinbarral/gazebosensorplugins) and [uwb ROS msg](https://github.com/valentinbarral/rosmsgs)
 + [VINS-Fusion](https://github.com/HKUST-Aerial-Robotics/VINS-Fusion) `frame_id` and `OpenCV` edited version from [here](https://github.com/engcang/vins-application#-vins-fusion-1)
     + `camera_models` package is edited to be compatible with `OpenCV4`
++ Gazebo [map (myself)](https://github.com/engcang/gazebo_maps)
 
 ---
 

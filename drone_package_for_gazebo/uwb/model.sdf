@@ -31,9 +31,9 @@
     </link>
 
     <plugin name='libgtec_uwb_plugin' filename='libgtec_uwb_plugin.so'>
-      <update_rate>25</update_rate>
+      <update_rate>50</update_rate>
       <nlosSoftWallWidth>0.25</nlosSoftWallWidth>
-      <tag_z_offset>0.3</tag_z_offset>
+      <tag_z_offset>0.2</tag_z_offset>
       <tag_link>tag_0</tag_link>
       <anchor_prefix>jackal</anchor_prefix>
       <all_los>false</all_los>

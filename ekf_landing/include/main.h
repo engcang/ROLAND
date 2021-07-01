@@ -21,8 +21,8 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <ekf_landing/bbox.h>
-#include <ekf_landing/bboxes.h>
+#include <ekf_landing/bbox.h> // generated
+#include <ekf_landing/bboxes.h> // generated
 #include <gtec_msgs/Ranging.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -107,7 +107,6 @@ class ekf_land{
     ros::Publisher estimated_pose_diff_pub;
     ros::Timer estimated_timer;
 
-    // void odom_callback(const nav_msgs::Odometry::ConstPtr& msg);
     void depth_callback(const sensor_msgs::Image::ConstPtr& msg);
     void tf_callback(const tf2_msgs::TFMessage::ConstPtr& msg);
     void bbox_callback(const ekf_landing::bboxes::ConstPtr& msg);
@@ -148,13 +147,10 @@ class ekf_land{
       center_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic+"/center", 10);
       estimated_pub = nh.advertise<sensor_msgs::PointCloud2>("/estimated_pose", 10);
       estimated_pose_diff_pub = nh.advertise<geometry_msgs::PoseStamped>("/estimated_pose_diff", 10);
-      // estimated_mobile_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/estimated_mobile_vel", 10);
-      
 
       ///// timer
       estimated_timer = nh.createTimer(ros::Duration(1/20.0), &ekf_land::pub_Timer, this); // every 1/30 second.
 
-      // last_time = ros::Time::now();
       ROS_WARN("Class generated, started node...");
     }
 };
@@ -163,13 +159,15 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
   boxes=*msg;
   depth_cvt_pcl.clear();
 
-  if(depth_check && tf_check && init){ // TODO: check if ground points are within box
+  if(depth_check && tf_check && init){
     pcl::PointCloud<pcl::PointXYZ> depth_cvt_pcl_center;
     cv::Mat depth_img = depth_ptr->image;
 
     int max_score_idx=0;
     for (int l=0; l < boxes.bboxes.size(); l++){
       if (l!=0){ max_score_idx = boxes.bboxes[max_score_idx].score < boxes.bboxes[l].score ? l : max_score_idx; }
+
+      ///// find the ground's surface equation ax+by+cz=1
       pcl::PointCloud<pcl::PointXYZ> ground_pcl;
       int ground_count = 0;
       int counter = 0;
@@ -223,6 +221,7 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
       x_ = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
       
       
+      ///// find the pcl within bbox and not the ground
       int count=0; float temp_depth=0.0;
       pcl::PointXYZ p3d_center;
       p3d_center.x = 0; p3d_center.y = 0; p3d_center.z = 0;
@@ -239,6 +238,7 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
             p3d.x = ( j - c_x ) * p3d.z / f_x;
             p3d.y = ( i - c_y ) * p3d.z / f_y;
 
+            //// check if ground
             float distance = abs(x_(0)*p3d.x + x_(1)*p3d.y + x_(2)*p3d.z - 1)/sqrtf(x_(0)*x_(0) + x_(1)*x_(1) + x_(2)*x_(2));
             if(distance < 0.1f){
               continue;
@@ -259,6 +259,7 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
     }
     pcl_pub.publish(cloud2msg(depth_cvt_pcl, pcl_base));
 
+    ///// filter update
     if (!depth_cvt_pcl_center.empty()){
       center_pub.publish(cloud2msg(depth_cvt_pcl_center, pcl_base));
       if (yolo_kalman){
@@ -372,47 +373,49 @@ void ekf_land::uwb_callback(const gtec_msgs::Ranging::ConstPtr& msg){
   }
 }
 
-// void ekf_land::mobile_robot_callback(const nav_msgs::Odometry::ConstPtr& msg){
-//   mobile_pose=*msg;
+/*
+void ekf_land::mobile_robot_callback(const nav_msgs::Odometry::ConstPtr& msg){
+  mobile_pose=*msg;
 
-//   if(tf_check){
-//     if (!init){
-//       P_ << 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-//             0.0, 1000.0, 0.0, 0.0, 0.0, 0.0,
-//             0.0, 0.0, 1000.0, 0.0, 0.0, 0.0,
-//             0.0, 0.0, 0.0, 1000.0, 0.0, 0.0,
-//             0.0, 0.0, 0.0, 0.0, 1000.0, 0.0,
-//             0.0, 0.0, 0.0, 0.0, 0.0, 1000.0;
-//       P = P_;
-//       Q << 0.05, 0.0, 0.0, 0.0, 0.0, 0.0,
-//            0.0, 0.05, 0.0, 0.0, 0.0, 0.0,
-//            0.0, 0.0, 0.05, 0.0, 0.0, 0.0,
-//            0.0, 0.0, 0.0, 0.05, 0.0, 0.0,
-//            0.0, 0.0, 0.0, 0.0, 0.05, 0.0,
-//            0.0, 0.0, 0.0, 0.0, 0.0, 0.05;
-//       Hc << -1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-//             0.0, -1.0, 0.0, 0.0, 1.0, 0.0,
-//             0.0, 0.0, -1.0, 0.0, 0.0, 1.0;
-//       delta_x << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
-//       X_ << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
-//       init=true;
-//     }
-//     else{
-//       VectorXf current(6);
-//       current << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
-//       if (corrected){
-//         X_ = Xhat + ( current - delta_x ); 
-//         P_ = P + Q;
-//       }
-//       else{
-//         X_ = X_ + ( current - delta_x );
-//         P_ = P_ + Q;
-//       }
-//       delta_x = current;
-//       corrected=false;
-//     }
-//   }
-// }
+  if(tf_check){
+    if (!init){
+      P_ << 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 1000.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 1000.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 1000.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 1000.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 1000.0;
+      P = P_;
+      Q << 0.05, 0.0, 0.0, 0.0, 0.0, 0.0,
+           0.0, 0.05, 0.0, 0.0, 0.0, 0.0,
+           0.0, 0.0, 0.05, 0.0, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.05, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.05, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.0, 0.05;
+      Hc << -1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+            0.0, -1.0, 0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, -1.0, 0.0, 0.0, 1.0;
+      delta_x << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
+      X_ << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
+      init=true;
+    }
+    else{
+      VectorXf current(6);
+      current << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
+      if (corrected){
+        X_ = Xhat + ( current - delta_x ); 
+        P_ = P + Q;
+      }
+      else{
+        X_ = X_ + ( current - delta_x );
+        P_ = P_ + Q;
+      }
+      delta_x = current;
+      corrected=false;
+    }
+  }
+}
+*/
 
 void ekf_land::mobile_robot_ekf_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg){
   mobile_pose_ekf=*msg;
