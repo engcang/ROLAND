@@ -1,4 +1,4 @@
-## ROLAND: Robust Landing of UAV on Moving Platform\\using Object Detection and UWB based Extended Kalman Filter
+## ROLAND: Robust Landing of UAV on Moving Platform using Object Detection and UWB based Extended Kalman Filter
 #### ChanYoung Kim, EungChang Mason Lee, JunHo Choi, JinWoo Jeon, SeokTae Kim, and Hyun Myung, "ROLAND: Robust Landing of UAV on Moving Platform using Object Detection and UWB based Extended Kalman Filter," in *Proc. of International Conference on Control, Automation and System (ICCAS)*, 2021.
 
 <br>
