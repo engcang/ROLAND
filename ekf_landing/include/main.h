@@ -283,7 +283,6 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
 void ekf_land::depth_callback(const sensor_msgs::Image::ConstPtr& msg){
   depth=*msg;
   try {
-    depth_cvt_pcl.clear();
     if (depth.encoding=="32FC1"){
       depth_ptr = cv_bridge::toCvCopy(depth, "32FC1"); // == sensor_msgs::image_encodings::TYPE_32FC1
       scale_factor=1.0;
