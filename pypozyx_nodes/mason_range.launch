@@ -1,0 +1,14 @@
+<launch>
+
+  <arg name="serial_port" default="/dev/ttyACM0"/>
+  <arg name="tag_name" default="5"/>
+  <arg name="anchor_names" default="0x7604;0x7632;0x760f;0x7647"/>
+
+  <node pkg="pypozyx_nodes" type="mason_multirange.py" name="pozyx_range" output="screen">
+      <param name="tag_id" value="$(arg tag_name)"/>
+      <param name="anchor_ids" value="$(arg anchor_names)"/>
+      <param name="serial_ports" value="$(arg serial_port)"/>
+      <param name="ranging_protocol" value="fast" />
+  </node>
+
+</launch>	

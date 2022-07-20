@@ -10,7 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
     cv_bridge
     pcl_conversions
     pcl_ros
-    gtec_msgs
+    pypozyx_nodes
     message_generation
     message_runtime
 )

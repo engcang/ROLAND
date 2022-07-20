@@ -2,12 +2,12 @@
 
 #common parameters
 #support: 1 imu 1 cam; 1 imu 2 cam: 2 cam; 
-imu: 0
+imu: 1
 num_of_cam: 2 
 
-imu_topic: "/mavros/imu/data"
-image0_topic: "/d435i/stereo_ir/left/image_raw"
-image1_topic: "/d435i/stereo_ir/right/image_raw"
+imu_topic: "/uav/mavros/imu/data_raw"
+image0_topic: "/uav/camera/infra1/image_rect_raw/compressed"
+image1_topic: "/uav/camera/infra2/image_rect_raw/compressed"
 
 cam0_calib: "cam.yaml"
 cam1_calib: "cam.yaml"

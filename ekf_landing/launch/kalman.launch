@@ -4,18 +4,18 @@
   <node name="rviz_mobile" pkg="rviz" type="rviz" args="-d $(find ekf_landing)/../rviz_mobile.rviz"/>
   <node name="rviz_drone" pkg="rviz" type="rviz" args="-d $(find ekf_landing)/../rviz_drone.rviz"/>
   <node name="visualizer_for_rviz" pkg="ekf_landing" type="visualizer.py" output="screen"/>
+  <node name="tf_broadcaster" pkg="ekf_landing" type="tf_broadcaster.py" output="screen"/>
 
 
   <param name="/depth_max_range" value="6.0"/>
-  <param name="/depth_fx" value="319.9988245765257"/>
-  <param name="/depth_fy" value="319.9988245765257"/>
-  <param name="/depth_cx" value="320.5"/>
-  <param name="/depth_cy" value="240.5"/>
-  <param name="/hfov" value="1.5708"/> <!-- radian -->
+  <param name="/depth_fx" value="382.31353296979177"/>
+  <param name="/depth_fy" value="383.37247938147743"/>
+  <param name="/depth_cx" value="318.8638686003325"/>
+  <param name="/depth_cy" value="234.48338338382933"/>
 
-  <param name="/depth_topic" value="/d435i/depth/image_raw"/>
+  <param name="/depth_topic" value="/uav/camera/aligned_depth_to_color/image_raw"/>
   <param name="/pcl_topic" value="/converted_pcl"/>
-  <param name="/pcl_base" value="d435i/depth_camera_link"/>
+  <param name="/pcl_base" value="cam_link"/>
   <param name="/body_base" value="base_link"/>
   <param name="/agg_pcl_base" value="map"/>
 
@@ -28,15 +28,15 @@
   <!-- <param name="/target" value="cv2.dnn.DNN_TARGET_CUDA"/> -->
 
   <param name="/inference_rate" value="10"/>
-  <param name="/img_in_topic" value="/d435i/stereo_ir/left/image_raw"/>
+  <param name="/img_in_topic" value="/uav/camera/color/image_raw/compressed"/>
   <param name="/img_out" value="True"/>
   <param name="/img_out_topic" value="/detected"/>
   <param name="/bbox_out_topic" value="/bboxes"/>
-  <param name="/confidence_threshold" value="0.8"/>
+  <param name="/confidence_threshold" value="0.4"/>
   <param name="/nms_threshold" value="0.4"/>
-  <param name="/class_file" value="$(find ekf_landing)/scripts/class.txt"/>
-  <param name="/weight_file" value="$(find ekf_landing)/scripts/yolov4-tiny-3l-obj_final.weights"/>
-  <param name="/cfg_file" value="$(find ekf_landing)/scripts/yolov4-tiny-3l-obj.cfg"/>
+  <param name="/class_file" value="$(find ekf_landing)/scripts/obj.names"/>
+  <param name="/weight_file" value="$(find ekf_landing)/scripts/yolov4-tiny-3l-jackal_final.weights"/>
+  <param name="/cfg_file" value="$(find ekf_landing)/scripts/yolov4-tiny-3l-jackal.cfg"/>
 
   <param name="/yolo_kalman" value="true"/>
   <param name="/uwb_kalman" value="true"/>

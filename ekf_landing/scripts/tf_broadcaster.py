@@ -16,8 +16,8 @@ signal.signal(signal.SIGINT, signal_handler)
 class caster():
     def __init__(self):
         rospy.init_node('tf_broadcaster', anonymous=True)
-        self.camera_link_name = rospy.get_param("/camera_link_name", 'camera_link')
-        self.pose_sub = rospy.Subscriber('/mavros/local_position/pose', PoseStamped, self.base_cb)
+        self.camera_link_name = rospy.get_param("/camera_link_name", 'cam_link')
+        self.pose_sub = rospy.Subscriber('/uav/mavros/local_position/pose', PoseStamped, self.base_cb)
         self.rate = rospy.Rate(30)
 
         self.base_check=0
@@ -31,7 +31,7 @@ class caster():
 self.header,"base_link","map")
 #        self.br.sendTransform((0.162, 0.0, 0.055), (0.5,-0.5,0.5,-0.5), self.header, self.camera_link_name,"base_link")
 #        self.br.sendTransform((0.162, 0.0, 0.055), (-0.6123724, 0.6123724, -0.3535534, 0.3535534), self.header, self.camera_link_name,"base_link") # downward 30 degree
-        self.br.sendTransform((0.162, 0.0, 0.055), (-0.6532815, 0.6532815, -0.270598, 0.270598), self.header, self.camera_link_name,"base_link") # downward 45 degree
+        self.br.sendTransform((0.162, 0.0, -0.055), (-0.6532815, 0.6532815, -0.270598, 0.270598), self.header, self.camera_link_name,"base_link") # downward 45 degree
         return
 
 if __name__ == '__main__':

@@ -51,7 +51,7 @@ class cv_yolo_ros():
         self.net.setPreferableBackend(self.backend)
         self.net.setPreferableTarget(self.target)
 
-        self.img_subscriber = rospy.Subscriber(self.img_in_topic, Image, self.img_callback)
+        self.img_subscriber = rospy.Subscriber(self.img_in_topic, CompressedImage, self.img_callback)
         self.img_publisher = rospy.Publisher(self.img_out_topic, Image, queue_size=1)
         self.box_publisher = rospy.Publisher(self.bbox_out_topic, bboxes, queue_size=1)
         self.bridge = CvBridge()
@@ -65,7 +65,7 @@ class cv_yolo_ros():
         self.model.setInputParams(size=(416, 416), scale=1/float(255.0), swapRB=True)
 
     def img_callback(self, msg):
-        self.img_cb_in = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        self.img_cb_in = self.bridge.compressed_imgmsg_to_cv2(msg, "bgr8")
         self.flag = True
 
 

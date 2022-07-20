@@ -23,8 +23,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <ekf_landing/bbox.h> // generated
 #include <ekf_landing/bboxes.h> // generated
-#include <gtec_msgs/Ranging.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <pypozyx_nodes/uwb_array.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <nav_msgs/Odometry.h>
@@ -49,21 +48,13 @@ using namespace Eigen;
 
 class ekf_land{
   public:
-    sensor_msgs::Image depth;
-    cv_bridge::CvImagePtr depth_ptr;
-    pcl::PointCloud<pcl::PointXYZ> depth_cvt_pcl;
-    
-    ekf_landing::bboxes boxes;
-    pcl::PointXYZ p3d;
-    geometry_msgs::PoseWithCovarianceStamped mobile_pose_ekf;
-    nav_msgs::Odometry mobile_pose;
-    gtec_msgs::Ranging uwb_measured;
+    cv_bridge::CvImagePtr m_depth_ptr;
 
     bool depth_check=false, tf_check=false, body_t_cam_check=false;
     bool uwb_kalman=false, yolo_kalman=false;
     std::string depth_topic, bboxes_topic, pcl_topic, pcl_base, body_base, agg_pcl_base; 
 
-    double f_x=0.0, f_y=0.0, c_x=0.0, c_y=0.0, depth_max_range=0.0, hfov=0.0;
+    double f_x=0.0, f_y=0.0, c_x=0.0, c_y=0.0, depth_max_range=0.0;
     double curr_roll=0.0, curr_pitch=0.0, curr_yaw=0.0;
     double scale_factor=1.0;
     
@@ -110,9 +101,8 @@ class ekf_land{
     void depth_callback(const sensor_msgs::Image::ConstPtr& msg);
     void tf_callback(const tf2_msgs::TFMessage::ConstPtr& msg);
     void bbox_callback(const ekf_landing::bboxes::ConstPtr& msg);
-    void uwb_callback(const gtec_msgs::Ranging::ConstPtr& msg);
-    void mobile_robot_ekf_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
-    //void mobile_robot_callback(const nav_msgs::Odometry::ConstPtr& msg);
+    void uwb_callback(const pypozyx_nodes::uwb_array::ConstPtr& msg);
+    void mobile_robot_ekf_callback(const nav_msgs::Odometry::ConstPtr& msg);
     void pub_Timer(const ros::TimerEvent& event);
 
     ekf_land(ros::NodeHandle& n) : nh(n){
@@ -122,8 +112,7 @@ class ekf_land{
       nh.param("/depth_fy", f_y, 554.254691191187);
       nh.param("/depth_cx", c_x, 320.5);
       nh.param("/depth_cy", c_y, 240.5);
-      nh.param("/hfov", hfov, 1.5); // radian
-      nh.param<std::string>("/depth_topic", depth_topic, "/camera/depth/image_raw");
+      nh.param<std::string>("/depth_topic", depth_topic, "/uav/camera/aligned_depth_to_color/image_raw");
       nh.param<std::string>("/bboxes_topic", bboxes_topic, "/bboxes");
 
       nh.param<std::string>("/pcl_topic", pcl_topic, "/converted_pcl");
@@ -138,9 +127,8 @@ class ekf_land{
       depth_sub = nh.subscribe<sensor_msgs::Image>(depth_topic, 10, &ekf_land::depth_callback, this);
       tf_sub = nh.subscribe<tf2_msgs::TFMessage>("/tf", 10, &ekf_land::tf_callback, this);
       yolo_sub = nh.subscribe<ekf_landing::bboxes>(bboxes_topic, 10, &ekf_land::bbox_callback, this);
-      uwb_sub = nh.subscribe<gtec_msgs::Ranging>("/gtec/toa/ranging", 10, &ekf_land::uwb_callback, this);
-      mobile_ekf_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined", 10, &ekf_land::mobile_robot_ekf_callback, this);
-      // mobile_sub = nh.subscribe<nav_msgs::Odometry>("/jackal1/jackal_velocity_controller/odom", 10, &ekf_land::mobile_robot_callback, this);
+      uwb_sub = nh.subscribe<pypozyx_nodes::uwb_array>("/uav/range", 10, &ekf_land::uwb_callback, this);
+      mobile_ekf_sub = nh.subscribe<nav_msgs::Odometry>("/robot5/odometry/filtered", 10, &ekf_land::mobile_robot_ekf_callback, this);
 
       ///// pub
       pcl_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic, 10);
@@ -156,69 +144,71 @@ class ekf_land{
 };
 
 void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
-  boxes=*msg;
+  ekf_landing::bboxes boxes=*msg;
+  pcl::PointCloud<pcl::PointXYZ> depth_cvt_pcl;
   depth_cvt_pcl.clear();
 
   if(depth_check && tf_check && init){
     pcl::PointCloud<pcl::PointXYZ> depth_cvt_pcl_center;
-    cv::Mat depth_img = depth_ptr->image;
+    cv::Mat depth_img = m_depth_ptr->image;
 
     int max_score_idx=0;
     for (int l=0; l < boxes.bboxes.size(); l++){
       if (l!=0){ max_score_idx = boxes.bboxes[max_score_idx].score < boxes.bboxes[l].score ? l : max_score_idx; }
 
       ///// find the ground's surface equation ax+by+cz=1
-      pcl::PointCloud<pcl::PointXYZ> ground_pcl;
-      int ground_count = 0;
-      int counter = 0;
-      int ground_num = 10;
-      int xlower = std::max(0, (int)boxes.bboxes[l].x - (int)(boxes.bboxes[l].width*0.5));
-      int xupper = std::min(depth_img.size().width-1 , (int)boxes.bboxes[l].x + (int)(boxes.bboxes[l].width*1.5));
-      int ylower = std::max(0, (int)boxes.bboxes[l].y - (int)(boxes.bboxes[l].width*0.5));
-      int yupper = std::min(depth_img.size().height-1 , (int)boxes.bboxes[l].y + (int)(boxes.bboxes[l].height*1.5));
+      // pcl::PointCloud<pcl::PointXYZ> ground_pcl;
+      // int ground_count = 0;
+      // int counter = 0;
+      // int ground_num = 10;
+      // int xlower = std::max(0, (int)boxes.bboxes[l].x - (int)(boxes.bboxes[l].width*0.5));
+      // int xupper = std::min(depth_img.size().width-1 , (int)boxes.bboxes[l].x + (int)(boxes.bboxes[l].width*1.5));
+      // int ylower = std::max(0, (int)boxes.bboxes[l].y - (int)(boxes.bboxes[l].width*0.5));
+      // int yupper = std::min(depth_img.size().height-1 , (int)boxes.bboxes[l].y + (int)(boxes.bboxes[l].height*1.5));
       
-      std::random_device rd; 
-      std::mt19937 mersenne(rd());
-      std::uniform_int_distribution<> xdist(xlower, xupper);
-      std::uniform_int_distribution<> ydist(ylower, yupper);
-      while (ground_count <= ground_num){
-        if (counter>1000){
-          return; }
-        int j = xdist(mersenne);
-        int i = ydist(mersenne);
-        if (boxes.bboxes[l].x<j && j<boxes.bboxes[l].x + boxes.bboxes[l].width && boxes.bboxes[l].y<i && i<boxes.bboxes[l].y + boxes.bboxes[l].height){
-          counter++;
-          continue;
-        }
-        float temp_depth = depth_img.at<float>(i,j);
-        if (std::isnan(temp_depth)){
-          counter++;
-          continue;
-        }
-        else if (temp_depth/scale_factor >= 0.2 and temp_depth/scale_factor <=depth_max_range){ // scale factor = 1 for 32FC, 1000 for 16UC
-          p3d.z = (temp_depth/scale_factor); 
-          p3d.x = ( j - c_x ) * p3d.z / f_x;
-          p3d.y = ( i - c_y ) * p3d.z / f_y;
+      // std::random_device rd; 
+      // std::mt19937 mersenne(rd());
+      // std::uniform_int_distribution<> xdist(xlower, xupper);
+      // std::uniform_int_distribution<> ydist(ylower, yupper);
+      // while (ground_count <= ground_num){
+      //   pcl::PointXYZ p3d;
+      //   if (counter>1000){
+      //     return; }
+      //   int j = xdist(mersenne);
+      //   int i = ydist(mersenne);
+      //   if (boxes.bboxes[l].x<j && j<boxes.bboxes[l].x + boxes.bboxes[l].width && boxes.bboxes[l].y<i && i<boxes.bboxes[l].y + boxes.bboxes[l].height){
+      //     counter++;
+      //     continue;
+      //   }
+      //   float temp_depth = depth_img.at<float>(i,j);
+      //   if (std::isnan(temp_depth)){
+      //     counter++;
+      //     continue;
+      //   }
+      //   else if (temp_depth/scale_factor >= 0.2 and temp_depth/scale_factor <=depth_max_range){ // scale factor = 1 for 32FC, 1000 for 16UC
+      //     p3d.z = (temp_depth/scale_factor); 
+      //     p3d.x = ( j - c_x ) * p3d.z / f_x;
+      //     p3d.y = ( i - c_y ) * p3d.z / f_y;
 
-          ground_pcl.push_back(p3d);
-          ground_count++;
-          counter++;
-        }
-      }
-      if (ground_count<3)
-        return;
+      //     ground_pcl.push_back(p3d);
+      //     ground_count++;
+      //     counter++;
+      //   }
+      // }
+      // if (ground_count<3)
+      //   return;
 
-      MatrixXd A = MatrixXd::Zero(ground_num,3);
-      VectorXd b(ground_num);
-      VectorXd x_(3);
-      for (int i = 0; i < ground_num; i++)
-      {
-        A(i,0) = ground_pcl.at(i).x;
-        A(i,1) = ground_pcl.at(i).y;
-        A(i,2) = ground_pcl.at(i).z;
-        b(i) = 1;
-      }
-      x_ = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
+      // MatrixXd A = MatrixXd::Zero(ground_num,3);
+      // VectorXd b(ground_num);
+      // VectorXd x_(3);
+      // for (int i = 0; i < ground_num; i++)
+      // {
+      //   A(i,0) = ground_pcl.at(i).x;
+      //   A(i,1) = ground_pcl.at(i).y;
+      //   A(i,2) = ground_pcl.at(i).z;
+      //   b(i) = 1;
+      // }
+      // x_ = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
       
       
       ///// find the pcl within bbox and not the ground
@@ -234,15 +224,16 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
           if (std::isnan(temp_depth))
             continue;
           else if (temp_depth/scale_factor >= 0.2 and temp_depth/scale_factor <=depth_max_range){ // scale factor = 1 for 32FC, 1000 for 16UC
+            pcl::PointXYZ p3d;
             p3d.z = (temp_depth/scale_factor); 
             p3d.x = ( j - c_x ) * p3d.z / f_x;
             p3d.y = ( i - c_y ) * p3d.z / f_y;
 
             //// check if ground
-            float distance = abs(x_(0)*p3d.x + x_(1)*p3d.y + x_(2)*p3d.z - 1)/sqrtf(x_(0)*x_(0) + x_(1)*x_(1) + x_(2)*x_(2));
-            if(distance < 0.1f){
-              continue;
-            }
+            // float distance = abs(x_(0)*p3d.x + x_(1)*p3d.y + x_(2)*p3d.z - 1)/sqrtf(x_(0)*x_(0) + x_(1)*x_(1) + x_(2)*x_(2));
+            // if(distance < 0.1f){
+              // continue;
+            // }
 
             depth_cvt_pcl.push_back(p3d);
             p3d_center.x = p3d_center.x + p3d.x;
@@ -281,14 +272,14 @@ void ekf_land::bbox_callback(const ekf_landing::bboxes::ConstPtr& msg){
 }
 
 void ekf_land::depth_callback(const sensor_msgs::Image::ConstPtr& msg){
-  depth=*msg;
+  sensor_msgs::Image depth=*msg;
   try {
     if (depth.encoding=="32FC1"){
-      depth_ptr = cv_bridge::toCvCopy(depth, "32FC1"); // == sensor_msgs::image_encodings::TYPE_32FC1
+      m_depth_ptr = cv_bridge::toCvCopy(depth, "32FC1"); // == sensor_msgs::image_encodings::TYPE_32FC1
       scale_factor=1.0;
     }
     else if (depth.encoding=="16UC1"){ // uint16_t (stdint.h) or ushort or unsigned_short
-      depth_ptr = cv_bridge::toCvCopy(depth, "16UC1"); // == sensor_msgs::image_encodings::TYPE_16UC1
+      m_depth_ptr = cv_bridge::toCvCopy(depth, "16UC1"); // == sensor_msgs::image_encodings::TYPE_16UC1
       scale_factor=1000.0;
     }
     depth_check=true;
@@ -353,13 +344,14 @@ void ekf_land::tf_callback(const tf2_msgs::TFMessage::ConstPtr& msg){
   tf_check=true;
 }
 
-void ekf_land::uwb_callback(const gtec_msgs::Ranging::ConstPtr& msg){
+void ekf_land::uwb_callback(const pypozyx_nodes::uwb_array::ConstPtr& msg){
   if(init){
-    if (uwb_kalman && msg->anchorId==1 && msg->tagId==0){
-      uwb_measured=*msg;
-      if (uwb_measured.range/1000.0 > 0.8 && uwb_measured.range/1000.0 < 10.0){
-        Zu << uwb_measured.range/1000.0;
-        Ru << (-uwb_measured.rss)*uwb_measured.errorEstimation*100.0;
+    if (uwb_kalman && msg->uwb_array.size()>0){
+      pypozyx_nodes::uwb_array uwb_measured = *msg;
+
+      if (uwb_measured.uwb_array[0].range.range > 0.35 && uwb_measured.uwb_array[0].range.range < 5.0){
+        Zu << uwb_measured.uwb_array[0].range.range;
+        Ru << (-uwb_measured.uwb_array[0].range.field_of_view)*1.0;
           double rt = sqrt(pow(X_(3) - X_(0), 2) + pow(X_(4) - X_(1), 2) + pow(X_(5) - X_(2), 2));
         Hu << (X_(0)-X_(3))/rt, (X_(1)-X_(4))/rt, (X_(2)-X_(5))/rt, (X_(3)-X_(0))/rt, (X_(4)-X_(1))/rt, (X_(5)-X_(2))/rt;
         Ku = P_ * Hu.transpose() * (Hu * P_ * Hu.transpose() + Ru).inverse();
@@ -372,51 +364,9 @@ void ekf_land::uwb_callback(const gtec_msgs::Ranging::ConstPtr& msg){
   }
 }
 
-/*
-void ekf_land::mobile_robot_callback(const nav_msgs::Odometry::ConstPtr& msg){
-  mobile_pose=*msg;
 
-  if(tf_check){
-    if (!init){
-      P_ << 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 1000.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 1000.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 1000.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 1000.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 1000.0;
-      P = P_;
-      Q << 0.05, 0.0, 0.0, 0.0, 0.0, 0.0,
-           0.0, 0.05, 0.0, 0.0, 0.0, 0.0,
-           0.0, 0.0, 0.05, 0.0, 0.0, 0.0,
-           0.0, 0.0, 0.0, 0.05, 0.0, 0.0,
-           0.0, 0.0, 0.0, 0.0, 0.05, 0.0,
-           0.0, 0.0, 0.0, 0.0, 0.0, 0.05;
-      Hc << -1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-            0.0, -1.0, 0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, -1.0, 0.0, 0.0, 1.0;
-      delta_x << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
-      X_ << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
-      init=true;
-    }
-    else{
-      VectorXf current(6);
-      current << map_t_body(0,3), map_t_body(1,3), map_t_body(2,3), mobile_pose.pose.pose.position.x, mobile_pose.pose.pose.position.y, mobile_pose.pose.pose.position.z;
-      if (corrected){
-        X_ = Xhat + ( current - delta_x ); 
-        P_ = P + Q;
-      }
-      else{
-        X_ = X_ + ( current - delta_x );
-        P_ = P_ + Q;
-      }
-      delta_x = current;
-      corrected=false;
-    }
-  }
-}
-*/
-
-void ekf_land::mobile_robot_ekf_callback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg){
+void ekf_land::mobile_robot_ekf_callback(const nav_msgs::Odometry::ConstPtr& msg){
+  nav_msgs::Odometry mobile_pose_ekf;
   mobile_pose_ekf=*msg;
   if(tf_check){
     if (!init){
