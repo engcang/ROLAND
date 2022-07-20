@@ -83,29 +83,33 @@ class viz():
             m2 = PointStamped()
             m.header.stamp = rospy.Time.now()
             m.header.frame_id = "map"
-            m.point.x = d.x + self.vio_drone_pose.pose.position.x
-            m.point.y = d.y + self.vio_drone_pose.pose.position.y
-            m.point.z = d.z + self.vio_drone_pose.pose.position.z
+            m.point.x = 0.2*d.x + self.vio_drone_pose.pose.position.x
+            m.point.y = 0.2*d.y + self.vio_drone_pose.pose.position.y
+            m.point.z = 0.2*d.z + self.vio_drone_pose.pose.position.z
             m2.header.stamp = rospy.Time.now()
             m2.header.frame_id = "map"
-            m2.point.x = self.encoder_mobile_pose.pose.position.x - d.x
-            m2.point.y = self.encoder_mobile_pose.pose.position.y - d.y
-            m2.point.z = self.encoder_mobile_pose.pose.position.z - d.z
+            m2.point.x = self.encoder_mobile_pose.pose.position.x - 0.2*d.x
+            m2.point.y = self.encoder_mobile_pose.pose.position.y - 0.2*d.y
+            m2.point.z = self.encoder_mobile_pose.pose.position.z - 0.2*d.z
 
             self.estimated_mobile_pose = PoseStamped()
             self.estimated_drone_pose = PoseStamped()
             self.estimated_mobile_pose.header.stamp = rospy.Time.now()
             self.estimated_mobile_pose.header.frame_id = "map"
-            self.estimated_mobile_pose.pose.position = m.point
+            # self.estimated_mobile_pose.pose.position = m.point
+            self.estimated_mobile_pose.pose.position = m2.point
             self.estimated_mobile_pose.pose.orientation.w = 1
             self.estimated_drone_pose.header.stamp = rospy.Time.now()
             self.estimated_drone_pose.header.frame_id = "map"
-            self.estimated_drone_pose.pose.position = m2.point
+            # self.estimated_drone_pose.pose.position = m2.point
+            self.estimated_drone_pose.pose.position = m.point
             self.estimated_drone_pose.pose.orientation.w = 1
 
             self.estimated_check=True
-            self.estimated_mobile.publish(m)
-            self.estimated_drone.publish(m2)
+            self.estimated_mobile.publish(m2)
+            # self.estimated_mobile.publish(m)
+            # self.estimated_drone.publish(m2)
+            self.estimated_drone.publish(m)
 
 ''' main '''
 pub_class = viz()
