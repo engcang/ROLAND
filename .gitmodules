@@ -1,9 +1,6 @@
 [submodule "rosmsgs"]
 	path = rosmsgs
 	url = https://github.com/valentinbarral/rosmsgs
-[submodule "tf_to_trajectory"]
-	path = tf_to_trajectory
-	url = https://github.com/engcang/tf_to_trajectory
 [submodule "gazebo_maps"]
 	path = gazebo_maps
 	url = git@github.com:engcang/gazebo_maps
