@@ -3,6 +3,8 @@
 
 <br>
 
+## Result [video](https://youtu.be/lgHbKAFs7ao)
+
 ### Requirements
 
 <details><summary>[click to see]</summary>
@@ -24,19 +26,26 @@ $ sudo apt install ros-<distro>-robot-pose-ekf
     + [uwb ROS msg](https://github.com/valentinbarral/rosmsgs)
     + `tf_to_trajectory` pacakge from [here (myself)](https://github.com/engcang/tf_to_trajectory)
 ~~~shell
-$ git clone --recursive https://github.com/engcang/iccas2021
+$ git clone --recursive https://github.com/engcang/ROLAND
 
 or
 
-$ git clone https://github.com/engcang/iccas2021
-$ cd iccas2021
+$ git clone https://github.com/engcang/ROLAND
+$ cd ROLAND
 $ git submodule update --init --recursive
 ~~~
 
 + [Important] Set gazebo model path
 ~~~shell
-$ echo "export GAZEBO_MODEL_PATH=:/home/<your_pcname>/<your_workspace>/src/iccas2021/gazebo_maps/bounding_wall_world:/home/<your_pcname>/<your_workspace>/src/iccas2021/drone_package_for_gazebo:$GAZEBO_MODEL_PATH" >> ~/.bashrc
-$ echo "export LD_LIBRARY_PATH=:/home/<your_pcname>/<your_workspace>/devel/lib:$LD_LIBRARY_PATH" >> ~/.bashrc
+$ cd ROLAND/gazebo_maps
+$ tar -xf bounding_wall_world.tar.xz
+$ tar -xf common_models.tar.xz
+
+$ cd ROLAND/gazebo_maps
+$ echo "export GAZEBO_MODEL_PATH=:$(pwd)/bounding_wall_world:$(pwd)/common_models:$(pwd)/drone_package_for_gazebo:$GAZEBO_MODEL_PATH" >> ~/.bashrc
+
+$ cd ~/your_workspace
+$ echo "export LD_LIBRARY_PATH=:$(pwd)/devel/lib:$LD_LIBRARY_PATH" >> ~/.bashrc
 $ . ~/.bashrc
 ~~~
 
