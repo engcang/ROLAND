@@ -5,7 +5,7 @@
 
 ## Result [video](https://youtu.be/lgHbKAFs7ao)
 
-### Requirements
+### Dependencies
 
 <details><summary>[click to see]</summary>
 
